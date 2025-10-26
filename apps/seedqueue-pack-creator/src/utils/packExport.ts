@@ -203,7 +203,7 @@ export async function exportResourcePack(
 
   for (const { key, name } of soundMappings) {
     const soundData = sounds[key as keyof SoundSettings];
-    if (soundData) {
+    if (soundData && typeof soundData === 'string') {
       const soundBlob = await dataURLToBlob(soundData);
       soundsFolder?.file(`${name}.ogg`, soundBlob);
       customSounds[name] = {

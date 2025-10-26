@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { useWallStore } from '../store/useWallStore';
 import { Button, Input, Select } from '@mcsr-tools/ui';

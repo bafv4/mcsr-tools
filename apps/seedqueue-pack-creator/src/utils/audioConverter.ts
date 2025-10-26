@@ -69,8 +69,9 @@ export async function convertAudioToOgg(file: File): Promise<Blob> {
     await ff.deleteFile(inputName);
     await ff.deleteFile(outputName);
 
-    // Convert Uint8Array to Blob
-    return new Blob([data], { type: 'audio/ogg' });
+    // Convert to Blob - create a new Uint8Array to ensure proper type compatibility
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    return new Blob([bytes.slice(0)], { type: 'audio/ogg' });
   } catch (error) {
     console.error('Audio conversion failed:', error);
     throw new Error('音声ファイルの変換に失敗しました');
