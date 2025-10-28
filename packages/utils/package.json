@@ -15,6 +15,9 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@mcsr-tools/types": "workspace:*"
+  },
   "devDependencies": {
     "typescript": "^5.3.3"
   }

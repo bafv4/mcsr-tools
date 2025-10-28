@@ -1,0 +1,305 @@
+import type { ItemCategory } from '@mcsr-tools/types';
+
+// Minecraft 1.16.x items commonly used in speedrunning
+export const MINECRAFT_ITEMS: Record<ItemCategory, string[]> = {
+  // ブロック：設置可能なブロック型アイテム（現世/ネザー問わない）
+  blocks: [
+    'minecraft:dirt',
+    'minecraft:cobblestone',
+    'minecraft:stone',
+    'minecraft:oak_planks',
+    'minecraft:spruce_planks',
+    'minecraft:birch_planks',
+    'minecraft:jungle_planks',
+    'minecraft:acacia_planks',
+    'minecraft:dark_oak_planks',
+    'minecraft:oak_log',
+    'minecraft:spruce_log',
+    'minecraft:birch_log',
+    'minecraft:jungle_log',
+    'minecraft:acacia_log',
+    'minecraft:dark_oak_log',
+    'minecraft:gravel',
+    'minecraft:sand',
+    'minecraft:netherrack',
+    'minecraft:soul_sand',
+    'minecraft:soul_soil',
+    'minecraft:basalt',
+    'minecraft:blackstone',
+    'minecraft:gilded_blackstone',
+    'minecraft:magma_block',
+    'minecraft:obsidian',
+    'minecraft:crying_obsidian',
+    'minecraft:end_stone',
+    'minecraft:nether_bricks',
+    'minecraft:glowstone',
+    'minecraft:warped_planks',
+    'minecraft:crimson_planks',
+    'minecraft:torch',
+    'minecraft:crafting_table',
+    'minecraft:furnace',
+    'minecraft:chest',
+    'minecraft:trapped_chest',
+    'minecraft:barrel',
+    'minecraft:white_shulker_box',
+    'minecraft:orange_shulker_box',
+    'minecraft:magenta_shulker_box',
+    'minecraft:light_blue_shulker_box',
+    'minecraft:yellow_shulker_box',
+    'minecraft:lime_shulker_box',
+    'minecraft:pink_shulker_box',
+    'minecraft:gray_shulker_box',
+    'minecraft:light_gray_shulker_box',
+    'minecraft:cyan_shulker_box',
+    'minecraft:purple_shulker_box',
+    'minecraft:blue_shulker_box',
+    'minecraft:brown_shulker_box',
+    'minecraft:green_shulker_box',
+    'minecraft:red_shulker_box',
+    'minecraft:black_shulker_box',
+    'minecraft:white_bed',
+    'minecraft:red_bed',
+    'minecraft:black_bed',
+    'minecraft:blue_bed',
+    'minecraft:brown_bed',
+    'minecraft:cyan_bed',
+    'minecraft:gray_bed',
+    'minecraft:green_bed',
+    'minecraft:light_blue_bed',
+    'minecraft:light_gray_bed',
+    'minecraft:lime_bed',
+    'minecraft:magenta_bed',
+    'minecraft:orange_bed',
+    'minecraft:pink_bed',
+    'minecraft:purple_bed',
+    'minecraft:yellow_bed',
+    'minecraft:oak_door',
+    'minecraft:iron_door',
+    'minecraft:ladder',
+    'minecraft:scaffolding',
+    'minecraft:brewing_stand',
+  ],
+
+  // ツール：ツール+防具+火打石と打ち金+ファイヤーチャージ+実用品+戦闘+エンダーパール+エンダーアイ
+  tools: [
+    // Tools
+    'minecraft:wooden_pickaxe',
+    'minecraft:wooden_axe',
+    'minecraft:wooden_shovel',
+    'minecraft:wooden_sword',
+    'minecraft:wooden_hoe',
+    'minecraft:stone_pickaxe',
+    'minecraft:stone_axe',
+    'minecraft:stone_shovel',
+    'minecraft:stone_sword',
+    'minecraft:stone_hoe',
+    'minecraft:iron_pickaxe',
+    'minecraft:iron_axe',
+    'minecraft:iron_shovel',
+    'minecraft:iron_sword',
+    'minecraft:iron_hoe',
+    'minecraft:golden_pickaxe',
+    'minecraft:golden_axe',
+    'minecraft:golden_shovel',
+    'minecraft:golden_sword',
+    'minecraft:golden_hoe',
+    'minecraft:diamond_pickaxe',
+    'minecraft:diamond_axe',
+    'minecraft:diamond_shovel',
+    'minecraft:diamond_sword',
+    'minecraft:diamond_hoe',
+
+    // Armor
+    'minecraft:leather_helmet',
+    'minecraft:leather_chestplate',
+    'minecraft:leather_leggings',
+    'minecraft:leather_boots',
+    'minecraft:iron_helmet',
+    'minecraft:iron_chestplate',
+    'minecraft:iron_leggings',
+    'minecraft:iron_boots',
+    'minecraft:golden_helmet',
+    'minecraft:golden_chestplate',
+    'minecraft:golden_leggings',
+    'minecraft:golden_boots',
+    'minecraft:diamond_helmet',
+    'minecraft:diamond_chestplate',
+    'minecraft:diamond_leggings',
+    'minecraft:diamond_boots',
+
+    // Combat
+    'minecraft:bow',
+    'minecraft:crossbow',
+    'minecraft:arrow',
+    'minecraft:spectral_arrow',
+    'minecraft:shield',
+    'minecraft:trident',
+
+    // Utility & Special Items
+    'minecraft:flint_and_steel',
+    'minecraft:fire_charge',
+    'minecraft:shears',
+    'minecraft:fishing_rod',
+    'minecraft:bucket',
+    'minecraft:water_bucket',
+    'minecraft:lava_bucket',
+    'minecraft:milk_bucket',
+    'minecraft:compass',
+    'minecraft:clock',
+    'minecraft:map',
+    'minecraft:oak_boat',
+    'minecraft:oak_sign',
+
+    // Ender items
+    'minecraft:ender_pearl',
+    'minecraft:ender_eye',
+  ],
+
+  // 素材：糸+羊毛+グロウストーンダスト+ネザーレンガ+インゴット+鉱石+ブレイズロッド+ブレイズパウダー
+  materials: [
+    'minecraft:stick',
+    'minecraft:string',
+    'minecraft:white_wool',
+    'minecraft:orange_wool',
+    'minecraft:magenta_wool',
+    'minecraft:light_blue_wool',
+    'minecraft:yellow_wool',
+    'minecraft:lime_wool',
+    'minecraft:pink_wool',
+    'minecraft:gray_wool',
+    'minecraft:light_gray_wool',
+    'minecraft:cyan_wool',
+    'minecraft:purple_wool',
+    'minecraft:blue_wool',
+    'minecraft:brown_wool',
+    'minecraft:green_wool',
+    'minecraft:red_wool',
+    'minecraft:black_wool',
+    'minecraft:glowstone_dust',
+    'minecraft:nether_brick',
+    'minecraft:iron_ingot',
+    'minecraft:gold_ingot',
+    'minecraft:diamond',
+    'minecraft:emerald',
+    'minecraft:netherite_scrap',
+    'minecraft:netherite_ingot',
+    'minecraft:coal',
+    'minecraft:charcoal',
+    'minecraft:iron_ore',
+    'minecraft:gold_ore',
+    'minecraft:diamond_ore',
+    'minecraft:emerald_ore',
+    'minecraft:nether_gold_ore',
+    'minecraft:nether_quartz_ore',
+    'minecraft:ancient_debris',
+    'minecraft:blaze_rod',
+    'minecraft:blaze_powder',
+    'minecraft:flint',
+    'minecraft:leather',
+    'minecraft:feather',
+    'minecraft:gunpowder',
+    'minecraft:slime_ball',
+    'minecraft:bone',
+    'minecraft:bone_meal',
+    'minecraft:snowball',
+    'minecraft:clay_ball',
+    'minecraft:brick',
+    'minecraft:nether_wart',
+    'minecraft:magma_cream',
+    'minecraft:warped_fungus',
+    'minecraft:crimson_fungus',
+    'minecraft:quartz',
+    'minecraft:enchanted_book',
+    'minecraft:yellow_dye',
+  ],
+
+  // 食料：食料+小麦+耐火ポーション+鉄塊金塊
+  food: [
+    'minecraft:bread',
+    'minecraft:cooked_cod',
+    'minecraft:cooked_salmon',
+    'minecraft:cooked_porkchop',
+    'minecraft:cooked_beef',
+    'minecraft:cooked_chicken',
+    'minecraft:cooked_mutton',
+    'minecraft:cooked_rabbit',
+    'minecraft:baked_potato',
+    'minecraft:golden_apple',
+    'minecraft:golden_carrot',
+    'minecraft:apple',
+    'minecraft:carrot',
+    'minecraft:potato',
+    'minecraft:cod',
+    'minecraft:salmon',
+    'minecraft:porkchop',
+    'minecraft:beef',
+    'minecraft:chicken',
+    'minecraft:mutton',
+    'minecraft:rabbit',
+    'minecraft:wheat',
+    'minecraft:potion',
+    'minecraft:splash_potion',
+    'minecraft:iron_nugget',
+    'minecraft:gold_nugget',
+  ],
+
+  // その他：上記以外のアイテム
+  misc: [
+    'minecraft:oak_sapling',
+    'minecraft:spruce_sapling',
+    'minecraft:birch_sapling',
+    'minecraft:jungle_sapling',
+    'minecraft:acacia_sapling',
+    'minecraft:dark_oak_sapling',
+    'minecraft:rotten_flesh',
+    'minecraft:spider_eye',
+    'minecraft:fermented_spider_eye',
+    'minecraft:glass_bottle',
+    'minecraft:bowl',
+    'minecraft:mushroom_stew',
+    'minecraft:suspicious_stew',
+    'minecraft:sugar',
+    'minecraft:glistering_melon_slice',
+    'minecraft:pufferfish',
+    'minecraft:rabbit_foot',
+    'minecraft:dragon_breath',
+    'minecraft:lingering_potion',
+  ],
+};
+
+export const ITEM_CATEGORIES = [
+  { id: 'blocks' as const, name: 'ブロック' },
+  { id: 'tools' as const, name: 'ツール' },
+  { id: 'materials' as const, name: '素材' },
+  { id: 'food' as const, name: '食料' },
+  { id: 'misc' as const, name: 'その他' },
+];
+
+export function getItemsByCategory(category: ItemCategory): string[] {
+  return MINECRAFT_ITEMS[category] || [];
+}
+
+export function getAllItems(): string[] {
+  return Object.values(MINECRAFT_ITEMS).flat();
+}
+
+export function searchItems(query: string): string[] {
+  if (!query) return getAllItems();
+  const lowerQuery = query.toLowerCase();
+  return getAllItems().filter((item) =>
+    item.toLowerCase().includes(lowerQuery)
+  );
+}
+
+export function formatItemName(itemId: string): string {
+  return itemId
+    .replace('minecraft:', '')
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+export function getItemImagePath(itemId: string, basePath: string = '/items'): string {
+  const imageName = itemId.replace('minecraft:', '') + '.png';
+  return `${basePath}/${imageName}`;
+}

@@ -6,3 +6,7 @@ export { Select } from './Select';
 export { Switch } from './Switch';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
 export { Modal } from './Modal';
+export { MinecraftItemIcon } from './MinecraftItemIcon';
+export type { MinecraftItemIconProps } from './MinecraftItemIcon';
+export { VersionChip } from './VersionChip';
+export type { VersionInfo, ChangelogEntry } from './VersionChip';
