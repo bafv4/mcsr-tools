@@ -8,6 +8,7 @@ export interface Area {
   rows: number;
   columns: number;
   useGrid?: boolean; // Whether to use grid layout (rows/columns)
+  padding?: number; // Gap between instances (in pixels)
 }
 
 export interface WallLayout {
@@ -69,6 +70,7 @@ interface WallStore {
   packInfo: PackInfo;
   sounds: SoundSettings;
   selectedArea: 'main' | 'locked' | 'preparing' | null;
+  replaceLockedInstances: boolean;
 
   setResolution: (resolution: Resolution) => void;
   setLayout: (layout: WallLayout) => void;
@@ -77,6 +79,7 @@ interface WallStore {
   setPackInfo: (packInfo: Partial<PackInfo>) => void;
   setSounds: (sounds: Partial<SoundSettings>) => void;
   selectArea: (area: 'main' | 'locked' | 'preparing' | null) => void;
+  setReplaceLockedInstances: (value: boolean) => void;
   resetToDefault: () => void;
   importData: (data: Partial<WallStore>) => void;
 }
@@ -95,6 +98,7 @@ const defaultLayout: WallLayout = {
     rows: 4,
     columns: 3,
     useGrid: true, // Use grid by default
+    padding: 0,
   },
   locked: {
     x: 1632, // Start where main ends
@@ -105,6 +109,7 @@ const defaultLayout: WallLayout = {
     columns: 1,
     show: true,
     useGrid: true,
+    padding: 0,
   },
   preparing: {
     x: 1520,
@@ -115,6 +120,7 @@ const defaultLayout: WallLayout = {
     columns: 1,
     show: false, // Hidden by default
     useGrid: true,
+    padding: 0,
   },
 };
 
@@ -162,6 +168,7 @@ export const useWallStore = create<WallStore>((set) => ({
   packInfo: defaultPackInfo,
   sounds: defaultSounds,
   selectedArea: null,
+  replaceLockedInstances: false,
 
   setResolution: (resolution) =>
     set((state) => {
@@ -218,6 +225,8 @@ export const useWallStore = create<WallStore>((set) => ({
 
   selectArea: (area) => set({ selectedArea: area }),
 
+  setReplaceLockedInstances: (value) => set({ replaceLockedInstances: value }),
+
   resetToDefault: () =>
     set({
       resolution: defaultResolution,
@@ -226,6 +235,7 @@ export const useWallStore = create<WallStore>((set) => ({
       packInfo: defaultPackInfo,
       sounds: defaultSounds,
       selectedArea: null,
+      replaceLockedInstances: false,
     }),
 
   importData: (data) => set((state) => ({ ...state, ...data })),

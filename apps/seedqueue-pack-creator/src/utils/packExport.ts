@@ -78,7 +78,8 @@ export async function exportResourcePack(
   layout: WallLayout,
   background: BackgroundSettings,
   resolution: Resolution,
-  sounds: SoundSettings
+  sounds: SoundSettings,
+  replaceLockedInstances: boolean
 ) {
   const zip = new JSZip();
 
@@ -120,6 +121,11 @@ export async function exportResourcePack(
     delete customLayout.main.columns;
   }
 
+  // Remove padding if it's 0 or undefined (keep default behavior)
+  if (!customLayout.main.padding) {
+    delete customLayout.main.padding;
+  }
+
   // Only include preparing if it exists and is shown
   if (layout.preparing && Array.isArray(layout.preparing) && layout.preparing.length > 0) {
     // Check if preparing area is shown (assuming it has a 'show' property)
@@ -136,8 +142,29 @@ export async function exportResourcePack(
           delete cleaned.columns;
         }
 
+        // Remove padding if it's 0 or undefined (keep default behavior)
+        if (!cleaned.padding) {
+          delete cleaned.padding;
+        }
+
         return cleaned;
       });
+    }
+  } else if (layout.preparing && (layout.preparing as any).show !== false) {
+    // Handle preparing as single object (not array)
+    customLayout.preparing = { ...layout.preparing };
+    delete customLayout.preparing.show; // Remove show flag from export
+    delete customLayout.preparing.useGrid; // Remove useGrid flag from export
+
+    // Remove rows and columns if useGrid is disabled
+    if (!layout.preparing.useGrid) {
+      delete customLayout.preparing.rows;
+      delete customLayout.preparing.columns;
+    }
+
+    // Remove padding if it's 0 or undefined (keep default behavior)
+    if (!customLayout.preparing.padding) {
+      delete customLayout.preparing.padding;
     }
   }
 
@@ -152,9 +179,14 @@ export async function exportResourcePack(
       delete customLayout.locked.rows;
       delete customLayout.locked.columns;
     }
+
+    // Remove padding if it's 0 or undefined (keep default behavior)
+    if (!customLayout.locked.padding) {
+      delete customLayout.locked.padding;
+    }
   }
 
-  customLayout.replaceLockedInstances = false;
+  customLayout.replaceLockedInstances = replaceLockedInstances;
 
   wallFolder?.file('custom_layout.json', JSON.stringify(customLayout, null, 2));
 

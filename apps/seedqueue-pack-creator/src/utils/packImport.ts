@@ -70,6 +70,11 @@ export async function importResourcePack(file: File): Promise<any> {
         preparing: customLayout.preparing || [],
         locked: customLayout.locked || {},
       };
+
+      // Import replaceLockedInstances if present
+      if (typeof customLayout.replaceLockedInstances === 'boolean') {
+        result.replaceLockedInstances = customLayout.replaceLockedInstances;
+      }
     }
 
     // Also support legacy format (wall.json) for backwards compatibility

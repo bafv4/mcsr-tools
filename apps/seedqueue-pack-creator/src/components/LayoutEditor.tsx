@@ -2,10 +2,10 @@ import { useState, useCallback, useMemo, memo } from 'react';
 import { useWallStore } from '../store/useWallStore';
 import { getPresets } from '../data/presets';
 import { AreaEditor } from './AreaEditor';
-import { Select, Button } from '@mcsr-tools/ui';
+import { Select, Button, Switch } from '@mcsr-tools/ui';
 
 export const LayoutEditor = memo(function LayoutEditor() {
-  const { resolution, setLayout } = useWallStore();
+  const { resolution, setLayout, replaceLockedInstances, setReplaceLockedInstances } = useWallStore();
   const [selectedPreset, setSelectedPreset] = useState('');
 
   const presets = useMemo(() => getPresets(resolution.width, resolution.height), [resolution.width, resolution.height]);
@@ -25,6 +25,10 @@ export const LayoutEditor = memo(function LayoutEditor() {
     { value: '', label: 'プリセットを選択' },
     ...presets.map((p) => ({ value: p.name, label: p.name })),
   ], [presets]);
+
+  const handleReplaceLockedInstancesChange = useCallback(() => {
+    setReplaceLockedInstances(!replaceLockedInstances);
+  }, [replaceLockedInstances, setReplaceLockedInstances]);
 
   return (
     <div className="space-y-6">
@@ -46,6 +50,14 @@ export const LayoutEditor = memo(function LayoutEditor() {
             プリセットを反映
           </Button>
         </div>
+      </div>
+
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+        <Switch
+          checked={replaceLockedInstances}
+          onChange={handleReplaceLockedInstancesChange}
+          label="Replace Locked Instances"
+        />
       </div>
 
       <div className="space-y-4">

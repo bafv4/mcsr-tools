@@ -511,45 +511,74 @@ export function WallPreview() {
     const shouldDrawGrid = area.useGrid !== false; // Default to true if undefined
 
     if (shouldDrawGrid) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3 * uiScale;
+      const padding = area.padding ?? 0;
 
-      const cellWidth = area.width / area.columns;
-      const cellHeight = area.height / area.rows;
+      // If padding is set, draw individual cells with gaps
+      if (padding > 0) {
+        const cellWidth = area.width / area.columns;
+        const cellHeight = area.height / area.rows;
 
-      for (let i = 1; i < area.columns; i++) {
-        const x = area.x + i * cellWidth;
-        ctx.beginPath();
-        ctx.moveTo(x, area.y);
-        ctx.lineTo(x, area.y + area.height);
-        ctx.stroke();
-      }
+        // Draw each cell as a separate rectangle with padding
+        for (let row = 0; row < area.rows; row++) {
+          for (let col = 0; col < area.columns; col++) {
+            const cellX = area.x + col * cellWidth + padding;
+            const cellY = area.y + row * cellHeight + padding;
+            const cellW = cellWidth - padding * 2;
+            const cellH = cellHeight - padding * 2;
 
-      for (let i = 1; i < area.rows; i++) {
-        const y = area.y + i * cellHeight;
-        ctx.beginPath();
-        ctx.moveTo(area.x, y);
-        ctx.lineTo(area.x + area.width, y);
-        ctx.stroke();
-      }
+            // Draw white border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3 * uiScale;
+            ctx.strokeRect(cellX, cellY, cellW, cellH);
 
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1 * uiScale;
+            // Draw colored border
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1 * uiScale;
+            ctx.strokeRect(cellX, cellY, cellW, cellH);
+          }
+        }
+      } else {
+        // Original grid drawing without padding
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3 * uiScale;
 
-      for (let i = 1; i < area.columns; i++) {
-        const x = area.x + i * cellWidth;
-        ctx.beginPath();
-        ctx.moveTo(x, area.y);
-        ctx.lineTo(x, area.y + area.height);
-        ctx.stroke();
-      }
+        const cellWidth = area.width / area.columns;
+        const cellHeight = area.height / area.rows;
 
-      for (let i = 1; i < area.rows; i++) {
-        const y = area.y + i * cellHeight;
-        ctx.beginPath();
-        ctx.moveTo(area.x, y);
-        ctx.lineTo(area.x + area.width, y);
-        ctx.stroke();
+        for (let i = 1; i < area.columns; i++) {
+          const x = area.x + i * cellWidth;
+          ctx.beginPath();
+          ctx.moveTo(x, area.y);
+          ctx.lineTo(x, area.y + area.height);
+          ctx.stroke();
+        }
+
+        for (let i = 1; i < area.rows; i++) {
+          const y = area.y + i * cellHeight;
+          ctx.beginPath();
+          ctx.moveTo(area.x, y);
+          ctx.lineTo(area.x + area.width, y);
+          ctx.stroke();
+        }
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1 * uiScale;
+
+        for (let i = 1; i < area.columns; i++) {
+          const x = area.x + i * cellWidth;
+          ctx.beginPath();
+          ctx.moveTo(x, area.y);
+          ctx.lineTo(x, area.y + area.height);
+          ctx.stroke();
+        }
+
+        for (let i = 1; i < area.rows; i++) {
+          const y = area.y + i * cellHeight;
+          ctx.beginPath();
+          ctx.moveTo(area.x, y);
+          ctx.lineTo(area.x + area.width, y);
+          ctx.stroke();
+        }
       }
     }
 
