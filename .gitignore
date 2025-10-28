@@ -50,3 +50,4 @@ next-env.d.ts
 scripts/node_modules
 scripts/package-lock.json
 scripts/pnpm-lock.yaml
+nul
