@@ -42,3 +42,11 @@ out
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+.ref
+.ref/*
+
+# Scripts (node_modules only, not the scripts themselves)
+scripts/node_modules
+scripts/package-lock.json
+scripts/pnpm-lock.yaml
