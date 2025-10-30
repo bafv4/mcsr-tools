@@ -43,6 +43,13 @@ const STACK_SIZE_1 = [
   'minecraft:bucket', 'minecraft:water_bucket', 'minecraft:lava_bucket', 'minecraft:milk_bucket',
   'minecraft:compass', 'minecraft:clock',
 
+  // Potions
+  'minecraft:potion', 'minecraft:splash_potion', 'minecraft:lingering_potion',
+
+  // Transportation
+  'minecraft:oak_boat', 'minecraft:spruce_boat', 'minecraft:birch_boat', 'minecraft:jungle_boat',
+  'minecraft:acacia_boat', 'minecraft:dark_oak_boat',
+
   // Food (cooked)
   'minecraft:mushroom_stew', 'minecraft:suspicious_stew',
 
