@@ -1,39 +1,213 @@
-import { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
+import { useState, useEffect, ImgHTMLAttributes } from 'react';
 import { cn } from './lib/utils';
-import { AtlasParser } from 'mc-assets';
-import itemsAtlases from 'mc-assets/dist/itemsAtlases.json';
-import blocksAtlases from 'mc-assets/dist/blocksAtlases.json';
 
-// Import PNG files as URLs
-const itemsAtlasLatest = new URL('mc-assets/dist/itemsAtlasLatest.png', import.meta.url).href;
-const itemsAtlasLegacy = new URL('mc-assets/dist/itemsAtlasLegacy.png', import.meta.url).href;
-const blocksAtlasLatest = new URL('mc-assets/dist/blocksAtlasLatest.png', import.meta.url).href;
-const blocksAtlasLegacy = new URL('mc-assets/dist/blocksAtlasLegacy.png', import.meta.url).href;
-
-// Create atlas parser singletons
-let itemsAtlasParser: AtlasParser | null = null;
-let blocksAtlasParser: AtlasParser | null = null;
-
-function getItemsAtlasParser(): AtlasParser {
-  if (!itemsAtlasParser) {
-    itemsAtlasParser = new AtlasParser(itemsAtlases, itemsAtlasLatest, itemsAtlasLegacy);
-  }
-  return itemsAtlasParser;
-}
-
-function getBlocksAtlasParser(): AtlasParser {
-  if (!blocksAtlasParser) {
-    blocksAtlasParser = new AtlasParser(blocksAtlases, blocksAtlasLatest, blocksAtlasLegacy);
-  }
-  return blocksAtlasParser;
-}
-
-export interface MinecraftItemIconProps extends Omit<ImgHTMLAttributes<HTMLCanvasElement>, 'src' | 'alt'> {
+export interface MinecraftItemIconProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'> {
   itemId: string;
   size?: number;
   fallback?: React.ReactNode;
   showFallbackOnError?: boolean;
-  version?: 'latest' | 'legacy'; // mc-assets atlas version: 'legacy' for MC 1.16.x and older, 'latest' for newer versions
+}
+
+/**
+ * Special filename mappings for items that don't follow the standard pattern
+ * Key: minecraft item ID (without minecraft: prefix)
+ * Value: Wiki CDN filename (without extension)
+ */
+const SPECIAL_FILENAME_MAPPINGS: Record<string, string> = {
+  // Beds - all use Invicon_ prefix
+  'white_bed': 'Invicon_White_Bed',
+  'orange_bed': 'Invicon_Orange_Bed',
+  'magenta_bed': 'Invicon_Magenta_Bed',
+  'light_blue_bed': 'Invicon_Light_Blue_Bed',
+  'yellow_bed': 'Invicon_Yellow_Bed',
+  'lime_bed': 'Invicon_Lime_Bed',
+  'pink_bed': 'Invicon_Pink_Bed',
+  'gray_bed': 'Invicon_Gray_Bed',
+  'light_gray_bed': 'Invicon_Light_Gray_Bed',
+  'cyan_bed': 'Invicon_Cyan_Bed',
+  'purple_bed': 'Invicon_Purple_Bed',
+  'blue_bed': 'Invicon_Blue_Bed',
+  'brown_bed': 'Invicon_Brown_Bed',
+  'green_bed': 'Invicon_Green_Bed',
+  'red_bed': 'Invicon_Red_Bed',
+  'black_bed': 'Invicon_Black_Bed',
+
+  // Blocks
+  'magma_block': 'Invicon_Magma_Block',
+  'tnt': 'Invicon_TNT',
+
+  // Tools & Items
+  'fire_charge': 'Invicon_Fire_Charge',
+  'flint_and_steel': 'Invicon_Flint_and_Steel',
+
+  // Food
+  'golden_apple': 'Invicon_Golden_Apple',
+  'cooked_porkchop': 'Invicon_Cooked_Porkchop',
+
+  // Nether items
+  'blaze_rod': 'Invicon_Blaze_Rod',
+  'blaze_powder': 'Invicon_Blaze_Powder',
+  'ender_pearl': 'Invicon_Ender_Pearl',
+  'ender_eye': 'Invicon_Eye_of_Ender',
+
+  // Potions (using Fire Resistance as default visual)
+  'potion': 'Invicon_Potion_of_Fire_Resistance',
+  'splash_potion': 'Invicon_Splash_Potion_of_Fire_Resistance',
+  'lingering_potion': 'Invicon_Lingering_Potion_of_Fire_Resistance',
+
+  // Minecarts
+  'minecart': 'Invicon_Minecart',
+  'chest_minecart': 'Invicon_Minecart_with_Chest',
+  'furnace_minecart': 'Invicon_Minecart_with_Furnace',
+  'tnt_minecart': 'Invicon_Minecart_with_TNT',
+  'hopper_minecart': 'Invicon_Minecart_with_Hopper',
+};
+
+/**
+ * Items that use .gif instead of .png
+ */
+const GIF_ITEMS = new Set([
+  'magma_block',
+  'sea_lantern',
+  'prismarine',
+  'prismarine_bricks',
+  'dark_prismarine',
+]);
+
+/**
+ * Convert Minecraft item ID to Wiki CDN filename
+ * minecraft:crafting_table -> Invicon_Crafting_Table
+ * minecraft:oak_planks -> Invicon_Oak_Planks
+ */
+function itemIdToWikiFilename(itemId: string): string {
+  // Remove minecraft: prefix
+  const itemName = itemId.replace(/^minecraft:/, '');
+
+  // Check for special mapping first
+  if (SPECIAL_FILENAME_MAPPINGS[itemName]) {
+    return SPECIAL_FILENAME_MAPPINGS[itemName];
+  }
+
+  // Split by underscore and capitalize each word
+  const words = itemName.split('_').map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  );
+
+  // Most items use Invicon_ prefix
+  return 'Invicon_' + words.join('_');
+}
+
+/**
+ * Get file extension for an item
+ */
+function getFileExtension(itemId: string): string {
+  const itemName = itemId.replace(/^minecraft:/, '');
+  return GIF_ITEMS.has(itemName) ? '.gif' : '.png';
+}
+
+/**
+ * Get Minecraft Wiki CDN URL for an item
+ */
+function getWikiImageUrl(itemId: string): string {
+  const filename = itemIdToWikiFilename(itemId);
+  const extension = getFileExtension(itemId);
+  return `https://minecraft.wiki/images/${filename}${extension}`;
+}
+
+/**
+ * Generate a unique color for an item based on its ID
+ */
+function getItemColor(itemId: string): string {
+  const itemName = itemId.replace(/^minecraft:/, '');
+
+  // Hash the item name to get a consistent color
+  let hash = 0;
+  for (let i = 0; i < itemName.length; i++) {
+    hash = itemName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Convert to hue (0-360)
+  const hue = Math.abs(hash % 360);
+
+  return `hsl(${hue}, 65%, 55%)`;
+}
+
+/**
+ * Get emoji icon based on item category
+ */
+function getItemEmoji(itemId: string): string {
+  const itemName = itemId.replace(/^minecraft:/, '');
+
+  // Tools
+  if (itemName.includes('pickaxe')) return '⛏️';
+  if (itemName.includes('axe')) return '🪓';
+  if (itemName.includes('shovel')) return '🏗️';
+  if (itemName.includes('hoe')) return '🌾';
+  if (itemName.includes('sword')) return '⚔️';
+
+  // Armor
+  if (itemName.includes('helmet')) return '🪖';
+  if (itemName.includes('chestplate')) return '🦺';
+  if (itemName.includes('leggings')) return '👖';
+  if (itemName.includes('boots')) return '👢';
+
+  // Food
+  if (itemName.includes('apple')) return '🍎';
+  if (itemName.includes('bread')) return '🍞';
+  if (itemName.includes('meat') || itemName.includes('beef') || itemName.includes('porkchop')) return '🍖';
+  if (itemName.includes('fish') || itemName.includes('cod') || itemName.includes('salmon')) return '🐟';
+  if (itemName.includes('carrot')) return '🥕';
+  if (itemName.includes('potato')) return '🥔';
+
+  // Blocks
+  if (itemName.includes('stone') || itemName.includes('cobblestone')) return '🪨';
+  if (itemName.includes('wood') || itemName.includes('log') || itemName.includes('planks')) return '🪵';
+  if (itemName.includes('glass')) return '🔲';
+  if (itemName.includes('dirt') || itemName.includes('grass')) return '🟫';
+
+  // Items
+  if (itemName.includes('diamond')) return '💎';
+  if (itemName.includes('emerald')) return '💚';
+  if (itemName.includes('gold')) return '🟡';
+  if (itemName.includes('iron')) return '⚙️';
+  if (itemName.includes('book')) return '📖';
+  if (itemName.includes('potion')) return '🧪';
+  if (itemName.includes('bow')) return '🏹';
+  if (itemName.includes('arrow')) return '➡️';
+  if (itemName.includes('bed')) return '🛏️';
+  if (itemName.includes('chest')) return '📦';
+  if (itemName.includes('door')) return '🚪';
+  if (itemName.includes('torch')) return '🔦';
+  if (itemName.includes('bucket')) return '🪣';
+
+  // Default
+  return '📦';
+}
+
+/**
+ * Alternative CDN sources to try if primary fails
+ */
+function getAlternativeUrls(itemId: string): string[] {
+  const itemName = itemId.replace(/^minecraft:/, '');
+  const baseFilename = itemIdToWikiFilename(itemId);
+  const extension = getFileExtension(itemId);
+
+  // Generate simple filename (without Invicon_ prefix)
+  const words = itemName.split('_').map(word =>
+    word.charAt(0).toUpperCase() + word.slice(1)
+  );
+  const simpleFilename = words.join('_');
+
+  return [
+    // Try without Invicon_ prefix (for blocks and some items)
+    `https://minecraft.wiki/images/${simpleFilename}${extension}`,
+    // Try with Grid_ prefix (some items use this)
+    `https://minecraft.wiki/images/Grid_${simpleFilename}${extension}`,
+    // Try with .png if original was .gif
+    extension === '.gif' ? `https://minecraft.wiki/images/${baseFilename}.png` : null,
+    // Try with .gif if original was .png
+    extension === '.png' ? `https://minecraft.wiki/images/${baseFilename}.gif` : null,
+  ].filter(Boolean) as string[];
 }
 
 export function MinecraftItemIcon({
@@ -41,170 +215,82 @@ export function MinecraftItemIcon({
   size = 48,
   fallback,
   showFallbackOnError = true,
-  version = 'latest', // Default to latest (MC 1.16.1 textures are similar to latest)
   className,
   ...props
 }: MinecraftItemIconProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [imageUrl, setImageUrl] = useState<string>(getWikiImageUrl(itemId));
   const [hasError, setHasError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [alternativeIndex, setAlternativeIndex] = useState(-1);
 
-  const itemName = itemId.replace('minecraft:', '');
-
+  // Reset state when itemId changes
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    setImageUrl(getWikiImageUrl(itemId));
+    setHasError(false);
+    setAlternativeIndex(-1);
+  }, [itemId]);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const handleError = () => {
+    const alternatives = getAlternativeUrls(itemId);
+    const nextIndex = alternativeIndex + 1;
 
-    let isMounted = true;
-
-    async function renderItem() {
-      try {
-        // Try to find texture in multiple atlases with various naming patterns
-        const itemsParser = getItemsAtlasParser();
-        const blocksParser = getBlocksAtlasParser();
-
-        let textureInfo = null;
-
-        // 1. Try items atlas with exact name
-        textureInfo = itemsParser.getTextureInfo(itemName, version);
-
-        // 2. Try blocks atlas with exact name
-        if (!textureInfo) {
-          textureInfo = blocksParser.getTextureInfo(itemName, version);
-        }
-
-        // 3. Try blocks atlas with _front suffix (for blocks like crafting_table, furnace, etc.)
-        if (!textureInfo) {
-          textureInfo = blocksParser.getTextureInfo(`${itemName}_front`, version);
-        }
-
-        // 4. Try blocks atlas with _top suffix
-        if (!textureInfo) {
-          textureInfo = blocksParser.getTextureInfo(`${itemName}_top`, version);
-        }
-
-        // 5. Try blocks atlas with _side suffix
-        if (!textureInfo) {
-          textureInfo = blocksParser.getTextureInfo(`${itemName}_side`, version);
-        }
-
-        // 6. For items ending with _block, try without the _block suffix (e.g., magma_block -> magma)
-        if (!textureInfo && itemName.endsWith('_block')) {
-          const nameWithoutBlock = itemName.replace(/_block$/, '');
-          textureInfo = blocksParser.getTextureInfo(nameWithoutBlock, version);
-        }
-
-        // 7. Try with invsprite_ prefix (for beds, shulker boxes, leaves, etc.)
-        if (!textureInfo) {
-          textureInfo = itemsParser.getTextureInfo(`invsprite_${itemName}`, version);
-        }
-
-        if (!textureInfo) {
-          if (isMounted) {
-            setHasError(true);
-          }
-          return;
-        }
-
-        const img = await textureInfo.getLoadedImage();
-
-        if (!isMounted || !canvas || !ctx) {
-          return;
-        }
-
-        // Calculate source dimensions from atlas
-        const sourceX = textureInfo.u * img.width;
-        const sourceY = textureInfo.v * img.height;
-        const sourceWidth = img.width * textureInfo.su;
-        const sourceHeight = img.height * textureInfo.sv;
-
-        // Set canvas size
-        canvas.width = size;
-        canvas.height = size;
-
-        // Disable image smoothing for pixelated look
-        ctx.imageSmoothingEnabled = false;
-
-        // Clear canvas
-        ctx.clearRect(0, 0, size, size);
-
-        // Draw texture
-        ctx.drawImage(
-          img,
-          sourceX,
-          sourceY,
-          sourceWidth,
-          sourceHeight,
-          0,
-          0,
-          size,
-          size
-        );
-
-        if (isMounted) {
-          setIsLoaded(true);
-          setHasError(false);
-        }
-      } catch (error) {
-        console.error('Failed to render Minecraft item:', error);
-        if (isMounted) {
-          setHasError(true);
-        }
-      }
+    if (nextIndex < alternatives.length) {
+      // Try next alternative URL
+      setAlternativeIndex(nextIndex);
+      setImageUrl(alternatives[nextIndex]);
+    } else {
+      // All alternatives failed
+      setHasError(true);
     }
+  };
 
-    renderItem();
+  const handleLoad = () => {
+    setHasError(false);
+  };
 
-    return () => {
-      isMounted = false;
-    };
-  }, [itemId, itemName, size, version]);
-
-  // Show fallback if error occurred
+  // Show fallback if error and fallback is enabled
   if (hasError && showFallbackOnError) {
     if (fallback) {
       return <>{fallback}</>;
     }
-    // Default fallback: show first letter of item name
+
+    // Default fallback: show unique colored box with emoji
+    const color = getItemColor(itemId);
+    const emoji = getItemEmoji(itemId);
+
     return (
       <div
-        className={cn(
-          'flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold rounded',
-          className
-        )}
-        style={{ width: size, height: size, fontSize: size * 0.4 }}
+        className={cn('flex items-center justify-center rounded border-2 border-gray-300 dark:border-gray-600', className)}
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: color,
+          fontSize: size * 0.5,
+        }}
+        title={itemId}
+        {...props}
       >
-        {itemName.charAt(0).toUpperCase()}
+        <span style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }}>
+          {emoji}
+        </span>
       </div>
     );
   }
 
   return (
-    <>
-      <canvas
-        ref={canvasRef}
-        className={cn(
-          'pixelated',
-          !isLoaded && 'opacity-0',
-          isLoaded && 'opacity-100 transition-opacity duration-200',
-          className
-        )}
-        style={{ width: size, height: size }}
-        {...props}
-      />
-      {/* Loading placeholder */}
-      {!isLoaded && !hasError && (
-        <div
-          className={cn(
-            'absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse rounded',
-            className
-          )}
-          style={{ width: size, height: size }}
-        />
-      )}
-    </>
+    <img
+      src={imageUrl}
+      alt={itemId}
+      className={cn('pixelated', className)}
+      style={{
+        width: size,
+        height: size,
+        imageRendering: 'pixelated',
+        ...props.style,
+      }}
+      onError={handleError}
+      onLoad={handleLoad}
+      loading="lazy"
+      {...props}
+    />
   );
 }

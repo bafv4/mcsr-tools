@@ -113,11 +113,9 @@ export async function exportResourcePack(
   // Remove useGrid flag (internal only, not part of SeedQueue spec)
   delete customLayout.main.useGrid;
 
-  // Remove rows and columns from main if useGrid is disabled or they are not set
-  if (!layout.main.useGrid || !customLayout.main.rows || customLayout.main.rows === 0) {
+  // Only remove rows and columns from main if useGrid is disabled
+  if (!layout.main.useGrid) {
     delete customLayout.main.rows;
-  }
-  if (!layout.main.useGrid || !customLayout.main.columns || customLayout.main.columns === 0) {
     delete customLayout.main.columns;
   }
 
@@ -134,10 +132,12 @@ export async function exportResourcePack(
       customLayout.preparing = layout.preparing.map((area: any) => {
         const cleaned = { ...area };
         delete cleaned.show; // Remove show flag from export
+
+        // Only remove rows and columns if useGrid is disabled
+        const useGrid = area.useGrid;
         delete cleaned.useGrid; // Remove useGrid flag from export
 
-        // Remove rows and columns if useGrid is disabled
-        if (!area.useGrid) {
+        if (!useGrid) {
           delete cleaned.rows;
           delete cleaned.columns;
         }
@@ -152,12 +152,13 @@ export async function exportResourcePack(
     }
   } else if (layout.preparing && (layout.preparing as any).show !== false) {
     // Handle preparing as single object (not array)
+    const useGrid = (layout.preparing as any).useGrid;
     customLayout.preparing = { ...layout.preparing };
     delete customLayout.preparing.show; // Remove show flag from export
     delete customLayout.preparing.useGrid; // Remove useGrid flag from export
 
-    // Remove rows and columns if useGrid is disabled
-    if (!layout.preparing.useGrid) {
+    // Only remove rows and columns if useGrid is disabled
+    if (!useGrid) {
       delete customLayout.preparing.rows;
       delete customLayout.preparing.columns;
     }
@@ -170,12 +171,13 @@ export async function exportResourcePack(
 
   // Only include locked if it exists and is shown
   if (layout.locked && (layout.locked as any).show !== false) {
+    const useGrid = (layout.locked as any).useGrid;
     customLayout.locked = { ...layout.locked };
     delete customLayout.locked.show; // Remove show flag from export
     delete customLayout.locked.useGrid; // Remove useGrid flag from export
 
-    // Remove rows and columns if useGrid is disabled
-    if (!layout.locked.useGrid) {
+    // Only remove rows and columns if useGrid is disabled
+    if (!useGrid) {
       delete customLayout.locked.rows;
       delete customLayout.locked.columns;
     }

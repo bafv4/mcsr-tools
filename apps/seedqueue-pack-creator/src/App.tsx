@@ -12,11 +12,18 @@ import { importResourcePack } from './utils/packImport';
 
 const versionInfo: VersionInfo = {
   appName: 'SeedQueue Wall Maker',
-  version: 'v2.1',
+  version: 'v2.2',
   author: 'baf',
   authorUrl: 'https://github.com/bafv4',
   repoUrl: 'https://github.com/bafv4/mcsr-tools',
   changelog: [
+    {
+      version: 'v2.2',
+      date: '2025-10-30',
+      changes: [
+        'プリセットを反映したときに使えないリソースパックが生成される問題を修正',
+      ],
+    },
     {
       version: 'v2.1',
       date: '2025-10-28',

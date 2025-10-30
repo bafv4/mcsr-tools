@@ -139,6 +139,8 @@ export function scalePreset(
       height: Math.round(preset.main.height * screenHeight),
       rows: preset.main.rows,
       columns: preset.main.columns,
+      useGrid: true,
+      padding: 0,
     },
     locked: {
       x: Math.round(preset.locked.x * screenWidth),
@@ -148,6 +150,8 @@ export function scalePreset(
       rows: preset.locked.rows,
       columns: preset.locked.columns,
       show: preset.locked.show,
+      useGrid: true,
+      padding: 0,
     },
     preparing: {
       x: Math.round(preset.preparing.x * screenWidth),
@@ -157,6 +161,8 @@ export function scalePreset(
       rows: preset.preparing.rows,
       columns: preset.preparing.columns,
       show: preset.preparing.show,
+      useGrid: true,
+      padding: 0,
     },
   };
 }
