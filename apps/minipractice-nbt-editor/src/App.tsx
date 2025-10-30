@@ -5,7 +5,6 @@ import { parseNBTFile, exportNBTFile } from './utils/nbtParser';
 import { MinecraftInventoryLayout } from './components/MinecraftInventoryLayout';
 import { PresetManager } from './components/PresetManager';
 import { ImportModal } from './components/ImportModal';
-import { Buffer } from 'buffer';
 
 // GitHub URL for sample hotbar.nbt file
 const GITHUB_HOTBAR_URL = 'https://raw.githubusercontent.com/Knawk/mc-MiniPracticeKit/refs/heads/master/hotbar.nbt';
@@ -58,17 +57,17 @@ function App() {
     }
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
 
-    await handleFileImport(file);
+  //   await handleFileImport(file);
 
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  //   // Reset input
+  //   if (fileInputRef.current) {
+  //     fileInputRef.current.value = '';
+  //   }
+  // };
 
   const handleExport = async () => {
     try {
