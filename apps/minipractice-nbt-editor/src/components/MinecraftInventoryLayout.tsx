@@ -2,20 +2,21 @@ import { useState } from 'react';
 import { useInventoryStore } from '../store/useInventoryStore';
 import { ItemSlot } from './ItemSlot';
 import { ItemEditorModal } from './ItemEditorModal';
+import { ItemSlotContextMenu } from './ItemSlotContextMenu';
 import type { MinecraftItem } from '../utils/nbtParser';
-import type { ArmorType } from '@mcsr-tools/utils';
 
 export function MinecraftInventoryLayout() {
-  const { presets, selectedPreset } = useInventoryStore();
+  const { presets, selectedPreset, updateItemBySlot } = useInventoryStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [targetSlot, setTargetSlot] = useState<number | null>(null);
-  const [filterArmorType, setFilterArmorType] = useState<ArmorType | undefined>(undefined);
+  const [contextMenu, setContextMenu] = useState<{
+    slotIndex: number;
+    position: { x: number; y: number };
+  } | null>(null);
 
   if (selectedPreset === null) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <p className="text-secondary text-center">プリセットを選択してください</p>
-      </div>
+      <></>
     );
   }
 
@@ -29,13 +30,12 @@ export function MinecraftInventoryLayout() {
     );
   }
 
-  // Create slot arrays (41 slots: 0-8 hotbar, 9-35 inventory, 36-39 armor, 40 offhand)
-  const slots: (MinecraftItem | null)[] = Array(41).fill(null);
+  // Create slot arrays (36 slots: 0-8 hotbar, 9-35 inventory)
+  const slots: (MinecraftItem | null)[] = Array(36).fill(null);
 
   // Container mapping for MiniPracticeKit:
   // Container 0: Hotbar (slots 0-8 in container → slots 0-8 in UI)
   // Container 1: Main Inventory (slots 0-26 in container → slots 9-35 in UI)
-  // Container 2+: Other containers (armor, offhand, etc.)
 
   preset.containers.forEach((container, containerIndex) => {
     container.items.forEach((item) => {
@@ -51,23 +51,101 @@ export function MinecraftInventoryLayout() {
         if (itemSlot >= 0 && itemSlot <= 26) {
           slots[9 + itemSlot] = item;
         }
-      } else {
-        // Other containers: use slot as-is (for armor slots 36-39, offhand 40, etc.)
-        if (itemSlot >= 0 && itemSlot <= 40) {
-          slots[itemSlot] = item;
-        }
       }
     });
   });
 
-  const handleSlotClick = (slotIndex: number, armorType?: ArmorType) => {
+  const handleSlotClick = (slotIndex: number) => {
     // Open modal for both add and edit
     setTargetSlot(slotIndex);
-    setFilterArmorType(armorType);
     setIsModalOpen(true);
   };
 
-  const renderSlot = (slotIndex: number, slotType: 'normal' | 'armor' | 'offhand' = 'normal', armorType?: 'helmet' | 'chestplate' | 'leggings' | 'boots') => {
+  const handleContextMenu = (slotIndex: number, e: React.MouseEvent) => {
+    setContextMenu({
+      slotIndex,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  };
+
+  const handleCountChange = (slotIndex: number, newCount: number) => {
+    const item = slots[slotIndex];
+    if (!item) return;
+
+    // Determine container and slot mapping
+    let containerIndex: number;
+    let itemSlot: number;
+
+    if (slotIndex >= 0 && slotIndex <= 8) {
+      // Hotbar: container 0
+      containerIndex = 0;
+      itemSlot = slotIndex;
+    } else {
+      // Main inventory: container 1
+      containerIndex = 1;
+      itemSlot = slotIndex - 9;
+    }
+
+    updateItemBySlot(selectedPreset, containerIndex, itemSlot, {
+      ...item,
+      Count: newCount,
+    });
+  };
+
+  const handleDelete = (slotIndex: number) => {
+    // Determine container and slot mapping
+    let containerIndex: number;
+    let itemSlot: number;
+
+    if (slotIndex >= 0 && slotIndex <= 8) {
+      // Hotbar: container 0
+      containerIndex = 0;
+      itemSlot = slotIndex;
+    } else {
+      // Main inventory: container 1
+      containerIndex = 1;
+      itemSlot = slotIndex - 9;
+    }
+
+    updateItemBySlot(selectedPreset, containerIndex, itemSlot, null);
+  };
+
+  const handleMoveToSlot = (fromSlot: number, toSlot: number) => {
+    const fromItem = slots[fromSlot];
+    const toItem = slots[toSlot];
+
+    // Determine container indices and slot mappings for both slots
+    const getContainerAndSlot = (slotIndex: number) => {
+      if (slotIndex >= 0 && slotIndex <= 8) {
+        return { containerIndex: 0, itemSlot: slotIndex };
+      } else {
+        return { containerIndex: 1, itemSlot: slotIndex - 9 };
+      }
+    };
+
+    const from = getContainerAndSlot(fromSlot);
+    const to = getContainerAndSlot(toSlot);
+
+    // Swap items
+    if (fromItem) {
+      updateItemBySlot(selectedPreset, to.containerIndex, to.itemSlot, {
+        ...fromItem,
+        Slot: to.itemSlot,
+      });
+    }
+
+    if (toItem) {
+      updateItemBySlot(selectedPreset, from.containerIndex, from.itemSlot, {
+        ...toItem,
+        Slot: from.itemSlot,
+      });
+    } else if (fromItem) {
+      // Clear the from slot if there was no item at the to slot
+      updateItemBySlot(selectedPreset, from.containerIndex, from.itemSlot, null);
+    }
+  };
+
+  const renderSlot = (slotIndex: number) => {
     const item = slots[slotIndex];
     const isSelected = isModalOpen && targetSlot === slotIndex;
 
@@ -75,9 +153,9 @@ export function MinecraftInventoryLayout() {
       <ItemSlot
         item={item}
         selected={isSelected}
-        onClick={() => handleSlotClick(slotIndex, armorType)}
-        slotType={slotType}
-        armorType={armorType}
+        onClick={() => handleSlotClick(slotIndex)}
+        onContextMenu={(e) => handleContextMenu(slotIndex, e)}
+        slotType="normal"
       />
     );
   };
@@ -85,20 +163,11 @@ export function MinecraftInventoryLayout() {
   return (
     <>
       {/* Minecraft Inventory Layout */}
-      <div className="flex gap-6 justify-center items-end">
-        {/* Left side: Armor slots (vertical) */}
-        <div className="flex flex-col gap-2">
-          {[39, 38, 37, 36].map((slotIndex, idx) => (
-            <div key={slotIndex}>
-              {renderSlot(slotIndex, 'armor', ['helmet', 'chestplate', 'leggings', 'boots'][idx] as any)}
-            </div>
-          ))}
-        </div>
-
-        {/* Center: Main inventory + Hotbar */}
-        <div className="flex flex-col gap-4">
+      <div className="w-full">
+        {/* Main inventory + Hotbar */}
+        <div className="flex flex-col gap-6 w-auto overflow-x-auto">
           {/* Main Inventory (3 rows x 9 columns) */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 min-w-fit">
             {Array.from({ length: 3 }).map((_, rowIndex) => (
               <div key={rowIndex} className="flex gap-2">
                 {Array.from({ length: 9 }).map((_, colIndex) => {
@@ -114,19 +183,13 @@ export function MinecraftInventoryLayout() {
           </div>
 
           {/* Hotbar (1 row x 9 columns) */}
-          <div className="flex gap-2 pt-3 border-t border-gray-300 dark:border-gray-600">
+          <div className="flex gap-2 pt-6 border-t border-gray-300 dark:border-gray-600 min-w-fit">
             {Array.from({ length: 9 }).map((_, colIndex) => (
               <div key={colIndex}>
                 {renderSlot(colIndex)}
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Right side: Offhand slot */}
-        <div className="flex flex-col gap-1 items-center">
-          <div className="text-xs text-secondary whitespace-nowrap">Offhand</div>
-          {renderSlot(40, 'offhand')}
         </div>
       </div>
 
@@ -135,11 +198,40 @@ export function MinecraftInventoryLayout() {
         onClose={() => {
           setIsModalOpen(false);
           setTargetSlot(null);
-          setFilterArmorType(undefined);
         }}
         slotIndex={targetSlot}
-        filterByArmorSlot={filterArmorType}
       />
+
+      {contextMenu && (
+        <ItemSlotContextMenu
+          item={slots[contextMenu.slotIndex]}
+          slotIndex={contextMenu.slotIndex}
+          position={contextMenu.position}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => {
+            handleSlotClick(contextMenu.slotIndex);
+            setContextMenu(null);
+          }}
+          onDelete={
+            slots[contextMenu.slotIndex]
+              ? () => {
+                  handleDelete(contextMenu.slotIndex);
+                  setContextMenu(null);
+                }
+              : undefined
+          }
+          onCountChange={(count) => handleCountChange(contextMenu.slotIndex, count)}
+          onMoveToSlot={
+            contextMenu.slotIndex >= 0 && contextMenu.slotIndex <= 8
+              ? (targetSlot) => {
+                  handleMoveToSlot(contextMenu.slotIndex, targetSlot);
+                  setContextMenu(null);
+                }
+              : undefined
+          }
+          isHotbar={contextMenu.slotIndex >= 0 && contextMenu.slotIndex <= 8}
+        />
+      )}
     </>
   );
 }

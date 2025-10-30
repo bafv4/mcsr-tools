@@ -1,26 +1,52 @@
-import { formatItemName, getItemsByCategory, isStackable } from '@mcsr-tools/utils';
+import { isStackable, formatEnchantmentName } from '@mcsr-tools/utils';
 import { MinecraftItemIcon } from '@mcsr-tools/ui';
+import { formatItemName } from '../data/minecraftItems';
+import type { Enchantment } from '@mcsr-tools/types';
+import { Tooltip } from './Tooltip';
 
 interface ItemSlotProps {
   item?: {
     id: string;
     Count: number;
     Slot?: number;
+    tag?: {
+      Enchantments?: Enchantment[];
+      Damage?: number;
+    };
   } | null;
   selected?: boolean;
   onClick?: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   slotType?: 'normal' | 'armor' | 'offhand';
   armorType?: 'helmet' | 'chestplate' | 'leggings' | 'boots';
 }
 
-export function ItemSlot({ item, selected, onClick, slotType = 'normal', armorType }: ItemSlotProps) {
+export function ItemSlot({ item, selected, onClick, onContextMenu, slotType = 'normal', armorType }: ItemSlotProps) {
   const isEmpty = !item || item.id === 'minecraft:air';
-
-  // Check if item is a block
-  const isBlockItem = item && getItemsByCategory('blocks').includes(item.id);
 
   // Check if item is stackable
   const itemIsStackable = item && isStackable(item.id);
+
+  // Check if item has enchantments
+  const hasEnchantments = item?.tag?.Enchantments && item.tag.Enchantments.length > 0;
+
+  // Build tooltip content with enchantments
+  const getTooltipContent = () => {
+    if (!item) return null;
+
+    return (
+      <div className="text-left">
+        <div className="font-semibold">{formatItemName(item.id)}</div>
+        {hasEnchantments && (
+          <div className="mt-1 text-xs text-purple-300">
+            {item.tag!.Enchantments!.map((ench, i) => (
+              <div key={i}>{formatEnchantmentName(ench.id, ench.lvl)}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Get placeholder item ID for empty armor/offhand slots (from mc-assets)
   const getPlaceholderItemId = () => {
@@ -34,21 +60,27 @@ export function ItemSlot({ item, selected, onClick, slotType = 'normal', armorTy
   };
 
   const placeholderItemId = getPlaceholderItemId();
+  const tooltipContent = getTooltipContent();
 
-  return (
+  const slotButton = (
     <button
       onClick={onClick}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e);
+      }}
       disabled={!onClick}
       className={`
         relative w-20 h-20 rounded-lg border-2 transition-all
         ${selected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+          : hasEnchantments
+            ? 'border-purple-400 dark:border-purple-500 bg-white dark:bg-gray-700'
+            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
         }
         ${onClick ? 'hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md cursor-pointer' : 'cursor-default'}
         ${!onClick ? 'opacity-50' : ''}
       `}
-      title={item ? `${formatItemName(item.id)} x${item.Count}` : slotType === 'armor' ? `${armorType}` : 'Empty'}
     >
       {/* Empty slot placeholder with icon from mc-assets */}
       {isEmpty && placeholderItemId && (
@@ -71,23 +103,16 @@ export function ItemSlot({ item, selected, onClick, slotType = 'normal', armorTy
       {/* Item content */}
       {!isEmpty && (
         <div className="relative w-full h-full flex items-center justify-center">
-          {/* Item icon - smaller for blocks */}
+          {/* Item icon */}
           <MinecraftItemIcon
             itemId={item.id}
-            size={isBlockItem ? 48 : 64}
-            fallback={
-              <div className="text-[10px] font-medium text-primary text-center leading-tight p-1 overflow-hidden">
-                <div className="line-clamp-2">
-                  {formatItemName(item.id)}
-                </div>
-              </div>
-            }
+            size={64}
           />
 
           {/* Item count - larger with text outline, show for stackable items even if count is 1 */}
           {itemIsStackable && (
             <div
-              className="absolute bottom-0.5 right-0.5 text-lg font-bold text-white"
+              className="absolute bottom-0.5 right-0.5 text-xl font-bold text-white"
               style={{
                 textShadow: '1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 1px 0 #000, 1px 0 0 #000, 0 -1px 0 #000, -1px 0 0 #000'
               }}
@@ -95,8 +120,29 @@ export function ItemSlot({ item, selected, onClick, slotType = 'normal', armorTy
               {item.Count}
             </div>
           )}
+
+          {/* Enchantment indicator - purple sparkle icon */}
+          {hasEnchantments && (
+            <div className="absolute top-0.5 right-0.5 text-purple-500">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="drop-shadow-md"
+              >
+                <path d="M8 0l1.5 5.5L15 8l-5.5 1.5L8 15l-1.5-5.5L1 8l5.5-1.5z" />
+              </svg>
+            </div>
+          )}
         </div>
       )}
     </button>
+  );
+
+  return tooltipContent ? (
+    <Tooltip content={tooltipContent}>{slotButton}</Tooltip>
+  ) : (
+    slotButton
   );
 }

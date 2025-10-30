@@ -2,16 +2,20 @@ import { useState, useEffect } from 'react';
 import { Button, Input, Modal, MinecraftItemIcon } from '@mcsr-tools/ui';
 import { useInventoryStore } from '../store/useInventoryStore';
 import {
+  getItemsForArmorSlot,
+  getMaxStackSize,
+  isStackable,
+  getApplicableEnchantments,
+  getEnchantmentInfo,
+  type ArmorType
+} from '@mcsr-tools/utils';
+import {
   ITEM_CATEGORIES,
   getItemsByCategory,
   searchItems,
   formatItemName,
-  getItemsForArmorSlot,
-  getMaxStackSize,
-  isStackable,
-  type ArmorType
-} from '@mcsr-tools/utils';
-import type { ItemCategory } from '@mcsr-tools/types';
+} from '../data/minecraftItems';
+import type { ItemCategory, Enchantment } from '@mcsr-tools/types';
 
 interface ItemEditorModalProps {
   isOpen: boolean;
@@ -23,11 +27,12 @@ interface ItemEditorModalProps {
 export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot }: ItemEditorModalProps) {
   const { presets, selectedPreset, updateItemBySlot, deleteItemBySlot } = useInventoryStore();
 
-  const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('blocks');
+  const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState(1);
   const [initialItemState, setInitialItemState] = useState<{ id: string; count: number } | null>(null);
+  const [enchantments, setEnchantments] = useState<Enchantment[]>([]);
 
   // Helper function to find which category an item belongs to
   const findItemCategory = (itemId: string): ItemCategory => {
@@ -37,7 +42,7 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
         return category.id;
       }
     }
-    return 'blocks'; // Default fallback
+    return 'all'; // Default fallback
   };
 
   // Get current item in the slot
@@ -92,6 +97,7 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
         setSelectedItemId(currentItem.id);
         setItemCount(currentItem.Count);
         setInitialItemState({ id: currentItem.id, count: currentItem.Count });
+        setEnchantments(currentItem.tag?.Enchantments || []);
 
         // Find and set the category of the current item
         if (!filterByArmorSlot) {
@@ -103,7 +109,8 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
         setSelectedItemId(null);
         setItemCount(1);
         setInitialItemState(null);
-        setSelectedCategory('blocks');
+        setSelectedCategory('all');
+        setEnchantments([]);
       }
       setSearchQuery('');
     }
@@ -152,7 +159,12 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
       id: selectedItemId,
       Count: itemCount,
       Slot: targetSlot,
-      tag: existingItem?.tag,
+      tag: enchantments.length > 0
+        ? {
+            ...existingItem?.tag,
+            Enchantments: enchantments,
+          }
+        : existingItem?.tag,
     });
 
     handleClose();
@@ -221,24 +233,26 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
         <div className={`grid ${filterByArmorSlot ? 'grid-cols-1' : 'grid-cols-12'} gap-4`}>
           {/* Category Tabs - hide when filtering by armor slot */}
           {!filterByArmorSlot && (
-            <div className="col-span-3 space-y-1">
+            <div className="col-span-3">
               <div className="text-sm font-medium text-secondary mb-2">カテゴリ</div>
-              {ITEM_CATEGORIES.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setSelectedCategory(category.id);
-                    setSearchQuery('');
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
-                    selectedCategory === category.id
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-secondary'
-                  }`}
-                >
-                  {category.name}
-                </button>
-              ))}
+              <div className="space-y-1 max-h-[280px] overflow-y-auto">
+                {ITEM_CATEGORIES.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      setSearchQuery('');
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                      selectedCategory === category.id
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-secondary'
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -265,11 +279,6 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
                     <MinecraftItemIcon
                       itemId={itemId}
                       size={48}
-                      fallback={
-                        <div className="text-xs text-center text-primary break-all line-clamp-2">
-                          {formatItemName(itemId)}
-                        </div>
-                      }
                     />
                     <div className="text-xs text-center text-secondary break-all line-clamp-1">
                       {formatItemName(itemId)}
@@ -287,13 +296,13 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
         </div>
 
         {/* Item count - always show */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
           <div>
-            <label className="block text-sm font-medium text-primary mb-1">
+            <label className="block text-sm font-medium text-primary mb-2">
               数量 {selectedItemId && !stackable && <span className="text-xs text-secondary">(スタック不可)</span>}
             </label>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <input
                 type="range"
                 min="1"
@@ -318,15 +327,98 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
             </div>
           </div>
 
+          {/* Enchantments Section - show only for enchantable items */}
+          {selectedItemId && getApplicableEnchantments(selectedItemId).length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-primary">
+                  エンチャント
+                </label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEnchantments([
+                      ...enchantments,
+                      { id: getApplicableEnchantments(selectedItemId)[0], lvl: 1 },
+                    ]);
+                  }}
+                >
+                  + 追加
+                </Button>
+              </div>
+
+              {enchantments.length === 0 ? (
+                <div className="text-sm text-secondary text-center py-3 bg-gray-50 dark:bg-gray-800 rounded">
+                  エンチャントなし
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {enchantments.map((ench, index) => {
+                    const applicableEnchs = getApplicableEnchantments(selectedItemId);
+                    const enchInfo = getEnchantmentInfo(ench.id);
+                    const maxLevel = enchInfo?.maxLevel || 5;
+
+                    return (
+                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                        <select
+                          value={ench.id}
+                          onChange={(e) => {
+                            const newEnchs = [...enchantments];
+                            newEnchs[index].id = e.target.value;
+                            setEnchantments(newEnchs);
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-primary"
+                        >
+                          {applicableEnchs.map((enchId) => (
+                            <option key={enchId} value={enchId}>
+                              {getEnchantmentInfo(enchId)?.name || enchId}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          max={maxLevel}
+                          value={ench.lvl}
+                          onChange={(e) => {
+                            const newEnchs = [...enchantments];
+                            newEnchs[index].lvl = Math.max(1, Math.min(maxLevel, parseInt(e.target.value) || 1));
+                            setEnchantments(newEnchs);
+                          }}
+                          className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-primary"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEnchantments(enchantments.filter((_, i) => i !== index));
+                          }}
+                          className="hover:bg-red-600 hover:border-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:border-red-600"
+                        >
+                          削除
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-4">
+          <div className="flex items-center gap-3 pt-6">
             <Button variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
 
             {isEditMode && (
               <>
-                <Button variant="secondary" onClick={handleDelete} className="flex-1">
+                <Button
+                  variant="secondary"
+                  onClick={handleDelete}
+                  className="flex-1 hover:bg-red-600 hover:border-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:border-red-600"
+                >
                   削除
                 </Button>
                 <div className="w-px h-8 bg-gray-300 dark:bg-gray-600" />

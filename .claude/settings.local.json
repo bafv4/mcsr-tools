@@ -20,7 +20,9 @@
       "Bash(pnpm type-check:*)",
       "Bash(pnpm build:*)",
       "Bash(node -e:*)",
-      "Bash(pnpm dev:*)"
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev)"
     ],
     "deny": [],
     "ask": []

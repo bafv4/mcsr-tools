@@ -1,236 +1,57 @@
-// Minecraft 1.16.x items commonly used in speedrunning
-export const MINECRAFT_ITEMS = {
-  building: [
-    'minecraft:dirt',
-    'minecraft:cobblestone',
-    'minecraft:stone',
-    'minecraft:oak_planks',
-    'minecraft:spruce_planks',
-    'minecraft:birch_planks',
-    'minecraft:jungle_planks',
-    'minecraft:acacia_planks',
-    'minecraft:dark_oak_planks',
-    'minecraft:oak_log',
-    'minecraft:spruce_log',
-    'minecraft:birch_log',
-    'minecraft:gravel',
-    'minecraft:sand',
-    'minecraft:netherrack',
-    'minecraft:soul_sand',
-    'minecraft:basalt',
-    'minecraft:blackstone',
-    'minecraft:gilded_blackstone',
-    'minecraft:magma_block',
-    'minecraft:obsidian',
-    'minecraft:crying_obsidian',
-    'minecraft:end_stone',
-  ],
-  tools: [
-    'minecraft:wooden_pickaxe',
-    'minecraft:wooden_axe',
-    'minecraft:wooden_shovel',
-    'minecraft:wooden_sword',
-    'minecraft:stone_pickaxe',
-    'minecraft:stone_axe',
-    'minecraft:stone_shovel',
-    'minecraft:stone_sword',
-    'minecraft:iron_pickaxe',
-    'minecraft:iron_axe',
-    'minecraft:iron_shovel',
-    'minecraft:iron_sword',
-    'minecraft:golden_pickaxe',
-    'minecraft:golden_axe',
-    'minecraft:golden_shovel',
-    'minecraft:golden_sword',
-    'minecraft:diamond_pickaxe',
-    'minecraft:diamond_axe',
-    'minecraft:diamond_shovel',
-    'minecraft:diamond_sword',
-    'minecraft:flint_and_steel',
-    'minecraft:shears',
-  ],
-  armor: [
-    'minecraft:leather_helmet',
-    'minecraft:leather_chestplate',
-    'minecraft:leather_leggings',
-    'minecraft:leather_boots',
-    'minecraft:iron_helmet',
-    'minecraft:iron_chestplate',
-    'minecraft:iron_leggings',
-    'minecraft:iron_boots',
-    'minecraft:golden_helmet',
-    'minecraft:golden_chestplate',
-    'minecraft:golden_leggings',
-    'minecraft:golden_boots',
-    'minecraft:diamond_helmet',
-    'minecraft:diamond_chestplate',
-    'minecraft:diamond_leggings',
-    'minecraft:diamond_boots',
-  ],
-  food: [
-    'minecraft:bread',
-    'minecraft:cooked_cod',
-    'minecraft:cooked_salmon',
-    'minecraft:cooked_porkchop',
-    'minecraft:cooked_beef',
-    'minecraft:cooked_chicken',
-    'minecraft:baked_potato',
-    'minecraft:golden_apple',
-    'minecraft:golden_carrot',
-    'minecraft:apple',
-    'minecraft:carrot',
-    'minecraft:potato',
-  ],
-  combat: [
-    'minecraft:bow',
-    'minecraft:crossbow',
-    'minecraft:arrow',
-    'minecraft:spectral_arrow',
-    'minecraft:shield',
-    'minecraft:trident',
-  ],
-  resources: [
-    'minecraft:oak_sapling',
-    'minecraft:stick',
-    'minecraft:string',
-    'minecraft:feather',
-    'minecraft:gunpowder',
-    'minecraft:flint',
-    'minecraft:wheat',
-    'minecraft:coal',
-    'minecraft:charcoal',
-    'minecraft:iron_ingot',
-    'minecraft:gold_ingot',
-    'minecraft:diamond',
-    'minecraft:emerald',
-    'minecraft:iron_nugget',
-    'minecraft:gold_nugget',
-    'minecraft:ender_pearl',
-    'minecraft:blaze_rod',
-    'minecraft:blaze_powder',
-    'minecraft:ender_eye',
-    'minecraft:slime_ball',
-    'minecraft:snowball',
-    'minecraft:clay_ball',
-    'minecraft:brick',
-    'minecraft:leather',
-    'minecraft:bone',
-    'minecraft:bone_meal',
-    'minecraft:rotten_flesh',
-    'minecraft:spider_eye',
-  ],
-  nether: [
-    'minecraft:netherrack',
-    'minecraft:soul_sand',
-    'minecraft:soul_soil',
-    'minecraft:nether_wart',
-    'minecraft:nether_brick',
-    'minecraft:nether_bricks',
-    'minecraft:glowstone',
-    'minecraft:glowstone_dust',
-    'minecraft:magma_cream',
-    'minecraft:fire_charge',
-    'minecraft:warped_fungus',
-    'minecraft:crimson_fungus',
-    'minecraft:warped_planks',
-    'minecraft:crimson_planks',
-    'minecraft:ancient_debris',
-    'minecraft:netherite_scrap',
-    'minecraft:netherite_ingot',
-  ],
-  containers: [
-    'minecraft:chest',
-    'minecraft:trapped_chest',
-    'minecraft:barrel',
-    'minecraft:white_shulker_box',
-    'minecraft:orange_shulker_box',
-    'minecraft:magenta_shulker_box',
-    'minecraft:light_blue_shulker_box',
-    'minecraft:yellow_shulker_box',
-    'minecraft:lime_shulker_box',
-    'minecraft:pink_shulker_box',
-    'minecraft:gray_shulker_box',
-    'minecraft:light_gray_shulker_box',
-    'minecraft:cyan_shulker_box',
-    'minecraft:purple_shulker_box',
-    'minecraft:blue_shulker_box',
-    'minecraft:brown_shulker_box',
-    'minecraft:green_shulker_box',
-    'minecraft:red_shulker_box',
-    'minecraft:black_shulker_box',
-  ],
-  utility: [
-    'minecraft:crafting_table',
-    'minecraft:furnace',
-    'minecraft:bed',
-    'minecraft:white_bed',
-    'minecraft:oak_door',
-    'minecraft:iron_door',
-    'minecraft:ladder',
-    'minecraft:torch',
-    'minecraft:bucket',
-    'minecraft:water_bucket',
-    'minecraft:lava_bucket',
-    'minecraft:fishing_rod',
-    'minecraft:clock',
-    'minecraft:compass',
-    'minecraft:map',
-    'minecraft:oak_boat',
-    'minecraft:oak_sign',
-    'minecraft:scaffolding',
-  ],
-  brewing: [
-    'minecraft:brewing_stand',
-    'minecraft:glass_bottle',
-    'minecraft:potion',
-    'minecraft:splash_potion',
-    'minecraft:lingering_potion',
-    'minecraft:nether_wart',
-    'minecraft:blaze_powder',
-    'minecraft:spider_eye',
-    'minecraft:fermented_spider_eye',
-    'minecraft:magma_cream',
-    'minecraft:sugar',
-    'minecraft:glistering_melon_slice',
-    'minecraft:golden_carrot',
-    'minecraft:pufferfish',
-    'minecraft:rabbit_foot',
-    'minecraft:dragon_breath',
-  ],
-};
+// Re-export from utils package (which contains the full item list)
+export { MINECRAFT_ITEMS, getItemsByCategory, getAllItems } from '@mcsr-tools/utils';
+export type { ItemCategory } from '@mcsr-tools/types';
 
+import { getAllItems, getJapaneseName } from '@mcsr-tools/utils';
+
+// Category definitions for the UI (based on Minecraft 1.16 Creative Inventory tabs)
 export const ITEM_CATEGORIES = [
-  { id: 'building', name: '建築ブロック' },
-  { id: 'tools', name: 'ツール' },
-  { id: 'armor', name: '防具' },
-  { id: 'food', name: '食料' },
+  { id: 'all', name: 'すべて' },
+  { id: 'building_blocks', name: '建築ブロック' },
+  { id: 'decorations', name: '装飾ブロック' },
+  { id: 'redstone', name: 'レッドストーン' },
+  { id: 'transportation', name: '交通' },
+  { id: 'miscellaneous', name: '雑貨' },
+  { id: 'foodstuffs', name: '食料' },
+  { id: 'tools', name: '道具' },
   { id: 'combat', name: '戦闘' },
-  { id: 'resources', name: '素材' },
-  { id: 'nether', name: 'ネザー' },
-  { id: 'containers', name: 'コンテナ' },
-  { id: 'utility', name: '実用品' },
   { id: 'brewing', name: '醸造' },
 ] as const;
-
-export type ItemCategory = (typeof ITEM_CATEGORIES)[number]['id'];
-
-export function getItemsByCategory(category: ItemCategory): string[] {
-  return MINECRAFT_ITEMS[category] || [];
-}
-
-export function getAllItems(): string[] {
-  return Object.values(MINECRAFT_ITEMS).flat();
-}
 
 export function searchItems(query: string): string[] {
   if (!query) return getAllItems();
   const lowerQuery = query.toLowerCase();
-  return getAllItems().filter((item) =>
-    item.toLowerCase().includes(lowerQuery)
-  );
+
+  return getAllItems().filter((item: string) => {
+    // Search by item ID (with and without minecraft: prefix)
+    if (item.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Search by item ID without prefix (e.g., "diamond_sword")
+    const itemName = item.replace(/^minecraft:/, '');
+    if (itemName.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Search by Japanese name
+    const japaneseName = getJapaneseName(item);
+    if (japaneseName && japaneseName.includes(query)) {
+      return true;
+    }
+
+    return false;
+  });
 }
 
 export function formatItemName(itemId: string): string {
+  // Try to get Japanese name first
+  const japaneseName = getJapaneseName(itemId);
+  if (japaneseName) {
+    return japaneseName;
+  }
+
+  // Fallback to English formatted name
   return itemId
     .replace('minecraft:', '')
     .split('_')

@@ -255,9 +255,6 @@ importers:
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
-      mc-assets:
-        specifier: ^0.2.70
-        version: 0.2.70
       postcss:
         specifier: ^8.4.33
         version: 8.5.6
@@ -1230,10 +1227,6 @@ packages:
       - supports-color
     dev: true
 
-  /@zardoy/maxrects-packer@2.7.4:
-    resolution: {integrity: sha512-ZIDcSdtSg6EhKFxGYWCcTnA/0YVbpixBL+psUS6ncw4IvdDF5hWauMU3XeCfYwrT/88QFgAq/Pafxt+P9OJyoQ==}
-    dev: false
-
   /abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -2055,14 +2048,6 @@ packages:
     dependencies:
       yallist: 3.1.1
     dev: true
-
-  /mc-assets@0.2.70:
-    resolution: {integrity: sha512-2tsNxNpt6aGeLTbFPUiU06/PDAr54vTx7vKbPda2bNdjPYUJTnIMupvo0x4vVwdSZJSSJnr1KRl7GcMn1VJ82w==}
-    engines: {node: '>=18.0.0'}
-    dependencies:
-      maxrects-packer: /@zardoy/maxrects-packer@2.7.4
-      zod: 3.25.76
-    dev: false
 
   /merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
@@ -2887,10 +2872,6 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
-
-  /zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-    dev: false
 
   /zustand@4.5.7(@types/react@18.3.26)(react@18.3.1):
     resolution: {integrity: sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==}

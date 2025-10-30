@@ -5,6 +5,7 @@ interface HotbarStore extends HotbarData {
   selectedPreset: number | null;
   selectedContainer: number | null;
   selectedItem: { containerIndex: number; itemIndex: number } | null;
+  rawNBTData: any | null; // Store raw NBT data for debugging
 
   // Actions
   setPresets: (presets: Preset[]) => void;
@@ -12,10 +13,16 @@ interface HotbarStore extends HotbarData {
   selectContainer: (containerIndex: number) => void;
   selectItem: (containerIndex: number, itemIndex: number) => void;
   clearSelection: () => void;
-  loadHotbar: (data: HotbarData) => void;
-  updateItemBySlot: (presetIndex: number, containerIndex: number, slotIndex: number, item: MinecraftItem) => void;
+  loadHotbar: (data: HotbarData, rawData?: any) => void;
+  updateItemBySlot: (presetIndex: number, containerIndex: number, slotIndex: number, item: MinecraftItem | null) => void;
   deleteItemBySlot: (presetIndex: number, containerIndex: number, slotIndex: number) => void;
   addItem: (presetIndex: number, containerIndex: number, item: MinecraftItem) => void;
+  // Preset management
+  addPreset: () => void;
+  removePreset: (presetIndex: number) => void;
+  updatePresetName: (presetIndex: number, newName: string) => void;
+  movePreset: (fromIndex: number, toIndex: number) => void;
+  updateRawNBTData: (newRawData: any) => void;
   reset: () => void;
   // Legacy methods (kept for backward compatibility with InventoryView.tsx)
   updateItem: (presetIndex: number, containerIndex: number, itemIndex: number, item: MinecraftItem) => void;
@@ -31,6 +38,7 @@ export const useInventoryStore = create<HotbarStore>((set) => ({
   selectedPreset: null,
   selectedContainer: null,
   selectedItem: null,
+  rawNBTData: null,
 
   setPresets: (presets) =>
     set({ presets }),
@@ -47,12 +55,13 @@ export const useInventoryStore = create<HotbarStore>((set) => ({
   clearSelection: () =>
     set({ selectedPreset: null, selectedContainer: null, selectedItem: null }),
 
-  loadHotbar: (data) =>
+  loadHotbar: (data, rawData) =>
     set({
       presets: data.presets,
       selectedPreset: data.presets.length > 0 ? 0 : null,
       selectedContainer: null,
       selectedItem: null,
+      rawNBTData: rawData || null,
     }),
 
   updateItemBySlot: (presetIndex, containerIndex, slotIndex, item) =>
@@ -71,7 +80,12 @@ export const useInventoryStore = create<HotbarStore>((set) => ({
       const container = preset.containers[containerIndex];
       const itemIndex = container.items.findIndex(i => i.Slot === slotIndex);
 
-      if (itemIndex !== -1) {
+      if (item === null) {
+        // Delete item if null is passed
+        if (itemIndex !== -1) {
+          container.items.splice(itemIndex, 1);
+        }
+      } else if (itemIndex !== -1) {
         // Update existing item
         container.items[itemIndex] = item;
       } else {
@@ -102,6 +116,55 @@ export const useInventoryStore = create<HotbarStore>((set) => ({
       return { presets: newPresets };
     }),
 
+  // Preset management
+  addPreset: () =>
+    set((state) => {
+      const newPreset: Preset = {
+        slot: 0, // Always slot 0 for user-created presets
+        name: `New Preset ${state.presets.length + 1}`,
+        containers: [
+          {
+            id: 'minecraft:chest',
+            items: []
+          },
+          {
+            id: 'minecraft:shulker_box',
+            items: []
+          }
+        ]
+      };
+      return { presets: [...state.presets, newPreset] };
+    }),
+
+  removePreset: (presetIndex) =>
+    set((state) => {
+      const newPresets = state.presets.filter((_, i) => i !== presetIndex);
+      return { presets: newPresets };
+    }),
+
+  updatePresetName: (presetIndex, newName) =>
+    set((state) => {
+      const newPresets = [...state.presets];
+      newPresets[presetIndex] = {
+        ...newPresets[presetIndex],
+        name: newName
+      };
+      return { presets: newPresets };
+    }),
+
+  movePreset: (fromIndex, toIndex) =>
+    set((state) => {
+      const newPresets = [...state.presets];
+      const [movedPreset] = newPresets.splice(fromIndex, 1);
+      newPresets.splice(toIndex, 0, movedPreset);
+      return { presets: newPresets };
+    }),
+
+  updateRawNBTData: (newRawData) =>
+    set(() => ({
+      rawNBTData: newRawData,
+    })),
+
   // Legacy methods (kept for backward compatibility)
   updateItem: (presetIndex, containerIndex, itemIndex, item) =>
     set((state) => {
@@ -123,5 +186,6 @@ export const useInventoryStore = create<HotbarStore>((set) => ({
       selectedPreset: null,
       selectedContainer: null,
       selectedItem: null,
+      rawNBTData: null,
     }),
 }));
