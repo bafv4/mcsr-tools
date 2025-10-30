@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button, Select, Input } from '@mcsr-tools/ui';
 import { useInventoryStore } from './store/useInventoryStore';
 import { parseNBTFile, exportNBTFile } from './utils/nbtParser';
@@ -20,7 +20,6 @@ const PRACTICE_TYPES = [
 ];
 
 function App() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { loadHotbar, presets, selectedPreset, selectPreset, rawNBTData, reset } = useInventoryStore();
   const [practiceType, setPracticeType] = useState<string>('nether_enter');
   const [presetName, setPresetName] = useState<string>('');
