@@ -58,45 +58,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  define: {
-    'process.env': '{}',
-    'global': 'globalThis',
-  },
   server: {
     port: 3001,
   },
   build: {
-    chunkSizeWarningLimit: 1600,
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // Split vendor chunks
-          if (id.includes('node_modules')) {
-            if (id.includes('prismarine-nbt')) {
-              return 'nbt';
-            }
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('buffer')) {
-              return 'polyfills';
-            }
-            return 'vendor';
-          }
-        },
-      },
-    },
-  },
-  optimizeDeps: {
-    include: ['buffer', 'process/browser'],
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
-      },
-      inject: [path.resolve(__dirname, './polyfills.js')],
-    },
+    chunkSizeWarningLimit: 1000,
   },
 });
