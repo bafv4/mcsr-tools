@@ -24,7 +24,11 @@
       "Bash(pnpm install:*)",
       "Bash(pnpm dev)",
       "Bash(node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js:*)",
-      "Bash(pnpm remove:*)"
+      "Bash(pnpm remove:*)",
+      "Bash(vercel --version:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

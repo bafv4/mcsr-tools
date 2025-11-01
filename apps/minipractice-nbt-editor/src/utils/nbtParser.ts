@@ -144,6 +144,9 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
           const containerItems = containerTag.BlockEntityTag.Items || [];
 
           const items: MinecraftItem[] = containerItems.map((item: any) => {
+            // Debug: Log the raw slot value before conversion
+            console.log('Raw item.Slot:', item.Slot, 'Type:', typeof item.Slot, 'Constructor:', item.Slot?.constructor?.name);
+
             const baseItem: MinecraftItem = {
               id: item.id || '',
               Count: Number(item.Count) || 1,
