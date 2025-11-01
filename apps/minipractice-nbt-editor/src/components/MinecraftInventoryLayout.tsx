@@ -37,14 +37,9 @@ export function MinecraftInventoryLayout() {
   // Container 0: Hotbar (slots 0-8 in container → slots 0-8 in UI)
   // Container 1: Main Inventory (slots 0-26 in container → slots 9-35 in UI)
 
-  console.log('Preset containers:', preset.containers);
-
   preset.containers.forEach((container, containerIndex) => {
-    console.log(`Container ${containerIndex}:`, container.id, 'Items:', container.items.length);
-
     container.items.forEach((item) => {
       const itemSlot = item.Slot ?? 0;
-      console.log(`  Item ${item.id} at slot ${itemSlot} in container ${containerIndex}`);
 
       if (containerIndex === 0) {
         // Hotbar: slots 0-8 stay as 0-8
@@ -59,8 +54,6 @@ export function MinecraftInventoryLayout() {
       }
     });
   });
-
-  console.log('Final slots array:', slots.filter(s => s !== null).length, 'non-null items');
 
   const handleSlotClick = (slotIndex: number) => {
     // Open modal for both add and edit
@@ -155,17 +148,6 @@ export function MinecraftInventoryLayout() {
   const renderSlot = (slotIndex: number) => {
     const item = slots[slotIndex];
     const isSelected = isModalOpen && targetSlot === slotIndex;
-
-    // Debug: Log what we're trying to render
-    if (item) {
-      console.log(`Rendering slot ${slotIndex}:`, {
-        id: item.id,
-        Count: item.Count,
-        Slot: item.Slot,
-        hasTag: !!item.tag,
-        isEmpty: !item || item.id === 'minecraft:air'
-      });
-    }
 
     return (
       <ItemSlot

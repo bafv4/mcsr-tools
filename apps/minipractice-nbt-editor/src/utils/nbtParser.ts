@@ -43,17 +43,19 @@ function nbtToPlain(value: any): any {
     return value;
   }
 
-  // Check if it's a typed number object
-  if (typeof value === 'object' && value.constructor) {
-    const constructorName = value.constructor.name;
-    if (constructorName.includes('Int') || constructorName.includes('Float') || constructorName.includes('Double')) {
-      return Number(value);
-    }
-  }
-
   // Handle arrays
   if (Array.isArray(value)) {
     return value.map(nbtToPlain);
+  }
+
+  // Check if it's a typed number object by trying to convert it
+  // This works even when constructor.name is minified in production
+  if (typeof value === 'object' && value.constructor && value.constructor !== Object && value.constructor !== Array) {
+    // Try to convert to number - if it's a valid number, it's likely a typed number
+    const numValue = Number(value);
+    if (!isNaN(numValue)) {
+      return numValue;
+    }
   }
 
   // Handle objects
@@ -144,9 +146,6 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
           const containerItems = containerTag.BlockEntityTag.Items || [];
 
           const items: MinecraftItem[] = containerItems.map((item: any) => {
-            // Debug: Log the raw slot value before conversion
-            console.log('Raw item.Slot:', item.Slot, 'Type:', typeof item.Slot, 'Constructor:', item.Slot?.constructor?.name);
-
             const baseItem: MinecraftItem = {
               id: item.id || '',
               Count: Number(item.Count) || 1,
