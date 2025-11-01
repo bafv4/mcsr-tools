@@ -50,14 +50,10 @@ export function Tooltip({ content, children }: TooltipProps) {
       <div ref={containerRef}>{children}</div>
       {isVisible && (
         <div
-          className="fixed px-3 py-2 text-white text-sm pointer-events-none z-[9999]"
+          className="fixed px-3 py-2.5 pointer-events-none z-[9999] bg-gray-900 dark:bg-gray-800 border border-gray-700 dark:border-gray-600 rounded-lg shadow-xl"
           style={{
             left: `${position.x + 16}px`,
             top: `${position.y + 16}px`,
-            background: 'linear-gradient(to bottom, rgba(16, 0, 16, 0.94), rgba(80, 0, 80, 0.94))',
-            border: '2px solid',
-            borderImage: 'linear-gradient(to bottom, rgba(80, 0, 255, 0.5), rgba(40, 0, 127, 0.5)) 1',
-            boxShadow: '0 0 8px rgba(0, 0, 0, 0.5)',
           }}
         >
           {content}

@@ -36,10 +36,10 @@ export function ItemSlot({ item, selected, onClick, onContextMenu, slotType = 'n
 
     return (
       <div className="text-left">
-        <div className="font-semibold text-white">{formatItemName(item.id)}</div>
-        <div className="text-xs text-gray-400 mt-0.5">{item.id}</div>
+        <div className="font-semibold text-white text-base">{formatItemName(item.id)}</div>
+        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{item.id}</div>
         {hasEnchantments && (
-          <div className="mt-2 text-xs text-purple-300">
+          <div className="mt-2 text-xs text-purple-400 dark:text-purple-300">
             {item.tag!.Enchantments!.map((ench, i) => (
               <div key={i}>{formatEnchantmentName(ench.id, ench.lvl)}</div>
             ))}
