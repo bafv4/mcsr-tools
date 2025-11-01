@@ -156,6 +156,17 @@ export function MinecraftInventoryLayout() {
     const item = slots[slotIndex];
     const isSelected = isModalOpen && targetSlot === slotIndex;
 
+    // Debug: Log what we're trying to render
+    if (item) {
+      console.log(`Rendering slot ${slotIndex}:`, {
+        id: item.id,
+        Count: item.Count,
+        Slot: item.Slot,
+        hasTag: !!item.tag,
+        isEmpty: !item || item.id === 'minecraft:air'
+      });
+    }
+
     return (
       <ItemSlot
         item={item}
