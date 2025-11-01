@@ -82,7 +82,8 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
    */
   const isProtectedItem = (item: PresetSlotItem | null): boolean => {
     if (!item) return false;
-    return item.itemId === 'minecraft:shulker_box' || item.itemId === 'minecraft:command_block';
+    return item.itemId.includes('shulker_box') ||
+           item.itemId.includes('command_block');
   };
 
   /**
