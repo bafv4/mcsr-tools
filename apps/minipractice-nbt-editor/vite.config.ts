@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
-import nodePolyfills from 'vite-plugin-node-stdlib-browser';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // Plugin to copy shared assets from packages/ui/public to app's public
 function copySharedAssets() {
@@ -53,7 +53,17 @@ export default defineConfig({
   plugins: [
     react(),
     copySharedAssets(),
-    nodePolyfills(),
+    nodePolyfills({
+      // Specific polyfills for prismarine-nbt
+      include: ['buffer', 'process', 'util'],
+      globals: {
+        Buffer: true,
+        process: true,
+      },
+      overrides: {
+        fs: 'memfs',
+      },
+    }),
   ],
   resolve: {
     alias: {
