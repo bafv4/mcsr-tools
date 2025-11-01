@@ -136,12 +136,12 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
           if (!containerId) return;
 
           const containerTag = containerItem.tag;
-          if (!containerTag?.BlockEntityTag?.Items) {
+          if (!containerTag?.BlockEntityTag) {
             // Simple item, not a container
             return;
           }
 
-          const containerItems = containerTag.BlockEntityTag.Items;
+          const containerItems = containerTag.BlockEntityTag.Items || [];
 
           const items: MinecraftItem[] = containerItems.map((item: any) => {
             const baseItem: MinecraftItem = {
