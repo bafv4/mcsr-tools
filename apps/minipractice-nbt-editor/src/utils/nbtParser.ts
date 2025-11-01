@@ -26,6 +26,65 @@ export interface ParsedNBTResult {
 }
 
 /**
+ * Convert NBT typed values to plain JavaScript values recursively
+ */
+function nbtToPlain(value: any): any {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  // Handle primitive types
+  if (typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+
+  // Handle NBT typed numbers (Int8, Int16, Int32, Float, Double, etc.)
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  // Check if it's a typed number object
+  if (typeof value === 'object' && value.constructor) {
+    const constructorName = value.constructor.name;
+    if (constructorName.includes('Int') || constructorName.includes('Float') || constructorName.includes('Double')) {
+      return Number(value);
+    }
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    return value.map(nbtToPlain);
+  }
+
+  // Handle objects
+  if (typeof value === 'object') {
+    const result: any = {};
+    for (const key in value) {
+      if (value.hasOwnProperty(key)) {
+        result[key] = nbtToPlain(value[key]);
+      }
+    }
+    return result;
+  }
+
+  return value;
+}
+
+/**
+ * Parse Minecraft JSON text format
+ */
+function parseJSONText(text: string): string {
+  if (!text) return '';
+
+  try {
+    const parsed = JSON.parse(text);
+    return parsed.text || text;
+  } catch {
+    return text;
+  }
+}
+
+/**
  * Parse NBT file and extract hotbar preset data
  */
 export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
@@ -34,19 +93,26 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
 
   const { data: parsed } = await read(uint8Array);
 
+  // Convert NBT types to plain JavaScript values
+  const plainData = nbtToPlain(parsed);
+
+  console.log('Plain NBT data:', plainData);
+
   const presets: Preset[] = [];
 
   // Root structure: keys "0" to "8" for hotbar slots
-  if (parsed && typeof parsed === 'object') {
+  if (plainData && typeof plainData === 'object') {
     for (let slotNum = 0; slotNum < 9; slotNum++) {
       const slotKey = String(slotNum);
-      const slotData = (parsed as any)[slotKey];
+      const slotData = plainData[slotKey];
 
       if (!Array.isArray(slotData) || slotData.length === 0) continue;
 
       // Process ALL barrels in this slot (multiple presets are stored as array in slot 0)
       slotData.forEach((barrel: any) => {
-        const barrelId = barrel?.id;
+        if (!barrel || typeof barrel !== 'object') return;
+
+        const barrelId = barrel.id;
 
         // Skip empty slots (minecraft:air)
         if (barrelId === 'minecraft:air') return;
@@ -54,9 +120,9 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
         // Only process barrels (skip shulker boxes, command blocks, etc.)
         if (barrelId !== 'minecraft:barrel') return;
 
-        if (!barrel || !barrel.tag?.BlockEntityTag) return;
-
         const barrelTag = barrel.tag;
+        if (!barrelTag || !barrelTag.BlockEntityTag) return;
+
         const barrelName = barrelTag.display?.Name || `Preset ${slotNum + 1}`;
         const barrelItems = barrelTag.BlockEntityTag.Items || [];
 
@@ -64,6 +130,8 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
         const containers: Container[] = [];
 
         barrelItems.forEach((containerItem: any) => {
+          if (!containerItem || typeof containerItem !== 'object') return;
+
           const containerId = containerItem.id;
           if (!containerId) return;
 
@@ -78,8 +146,8 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
           const items: MinecraftItem[] = containerItems.map((item: any) => {
             const baseItem: MinecraftItem = {
               id: item.id || '',
-              Count: item.Count || 1,
-              Slot: item.Slot,
+              Count: Number(item.Count) || 1,
+              Slot: item.Slot !== undefined ? Number(item.Slot) : undefined,
             };
 
             // Parse tag if present
@@ -90,13 +158,13 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
               if (item.tag.Enchantments && Array.isArray(item.tag.Enchantments)) {
                 tag.Enchantments = item.tag.Enchantments.map((ench: any) => ({
                   id: ench.id || '',
-                  lvl: ench.lvl || 1,
+                  lvl: Number(ench.lvl) || 1,
                 }));
               }
 
               // Parse Damage
               if (item.tag.Damage !== undefined) {
-                tag.Damage = item.tag.Damage;
+                tag.Damage = Number(item.tag.Damage);
               }
 
               // Parse display
@@ -140,22 +208,12 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
     }
   }
 
+  console.log('Parsed presets:', presets);
+
   return {
     data: { presets },
-    raw: parsed
+    raw: plainData
   };
-}
-
-/**
- * Parse Minecraft JSON text format
- */
-function parseJSONText(text: string): string {
-  try {
-    const parsed = JSON.parse(text);
-    return parsed.text || text;
-  } catch {
-    return text;
-  }
 }
 
 /**
@@ -175,6 +233,15 @@ export async function exportNBTFile(
   } else {
     // Create new structure from scratch
     nbtValue = {};
+
+    // Initialize all 9 slots with empty arrays
+    for (let i = 0; i < 9; i++) {
+      nbtValue[String(i)] = Array(9).fill({
+        id: 'minecraft:air',
+        Count: 1,
+        tag: { Charged: 0 }
+      });
+    }
   }
 
   // Group presets by slot number (we only edit slot 0)
@@ -189,141 +256,122 @@ export async function exportNBTFile(
   });
 
   // Only update slot 0 (edited preset), keep others unchanged
-  for (let slotNum = 0; slotNum < 9; slotNum++) {
-    // Skip if we're preserving raw data and this isn't slot 0
-    if (rawNBTData && slotNum !== 0) {
-      continue;
-    }
+  const presetsInSlot0 = slotMap.get(0) || [];
 
-    const presetsInSlot = slotMap.get(slotNum) || [];
-
-    if (presetsInSlot.length === 0) {
-      // Empty slot - only create if not using raw data
-      if (!rawNBTData) {
-        nbtValue[String(slotNum)] = Array(9).fill(null).map(() => ({
-          id: 'minecraft:air',
-          Count: 1,
-          tag: {
-            Charged: 0
-          }
-        }));
-      }
-    } else {
-      // Slot with barrels (presets)
-      // Build edited barrels
-      const editedBarrels = presetsInSlot.map((preset) => {
-        // Build barrel items (containers)
-        const barrelItems = preset.containers.map((container, containerIdx) => {
-          // Build container items
-          const containerItems = container.items.map((item) => {
-            const nbtItem: any = {
-              Slot: item.Slot ?? 0,
-              id: item.id,
-              Count: item.Count,
-            };
-
-            // Build tag if present
-            if (item.tag) {
-              const tagValue: any = {};
-
-              // Convert Enchantments
-              if (item.tag.Enchantments && item.tag.Enchantments.length > 0) {
-                tagValue.Enchantments = item.tag.Enchantments.map((ench: Enchantment) => ({
-                  id: ench.id,
-                  lvl: ench.lvl,
-                }));
-              }
-
-              // Convert Damage
-              if (item.tag.Damage !== undefined) {
-                tagValue.Damage = item.tag.Damage;
-              }
-
-              // Convert display
-              if (item.tag.display) {
-                tagValue.display = {};
-                if (item.tag.display.Name) {
-                  tagValue.display.Name = item.tag.display.Name;
-                }
-              }
-
-              // Copy any other tag properties
-              for (const key in item.tag) {
-                if (!['Enchantments', 'Damage', 'display'].includes(key)) {
-                  tagValue[key] = (item.tag as any)[key];
-                }
-              }
-
-              if (Object.keys(tagValue).length > 0) {
-                nbtItem.tag = tagValue;
-              }
-            }
-
-            return nbtItem;
-          });
-
-          return {
-            Slot: containerIdx,
-            id: container.id,
-            Count: 1,
-            tag: {
-              BlockEntityTag: {
-                Items: containerItems,
-                id: container.id.includes('shulker') ? 'minecraft:shulker_box' : 'minecraft:chest'
-              },
-              display: {
-                Lore: ['"(+NBT)"']
-              }
-            }
+  if (presetsInSlot0.length > 0) {
+    // Build edited barrels for slot 0
+    const editedBarrels = presetsInSlot0.map((preset) => {
+      // Build barrel items (containers)
+      const barrelItems = preset.containers.map((container, containerIdx) => {
+        // Build container items
+        const containerItems = container.items.map((item) => {
+          const nbtItem: any = {
+            Slot: item.Slot ?? 0,
+            id: item.id,
+            Count: item.Count,
           };
+
+          // Build tag if present
+          if (item.tag) {
+            const tagValue: any = {};
+
+            // Convert Enchantments
+            if (item.tag.Enchantments && item.tag.Enchantments.length > 0) {
+              tagValue.Enchantments = item.tag.Enchantments.map((ench: Enchantment) => ({
+                id: ench.id,
+                lvl: ench.lvl,
+              }));
+            }
+
+            // Convert Damage
+            if (item.tag.Damage !== undefined) {
+              tagValue.Damage = item.tag.Damage;
+            }
+
+            // Convert display
+            if (item.tag.display) {
+              tagValue.display = {};
+              if (item.tag.display.Name) {
+                tagValue.display.Name = item.tag.display.Name;
+              }
+            }
+
+            // Copy any other tag properties
+            for (const key in item.tag) {
+              if (!['Enchantments', 'Damage', 'display'].includes(key)) {
+                tagValue[key] = (item.tag as any)[key];
+              }
+            }
+
+            if (Object.keys(tagValue).length > 0) {
+              nbtItem.tag = tagValue;
+            }
+          }
+
+          return nbtItem;
         });
 
-        // Build barrel NBT
         return {
-          id: 'minecraft:barrel',
+          Slot: containerIdx,
+          id: container.id,
           Count: 1,
           tag: {
-            RepairCost: 0,
             BlockEntityTag: {
-              Items: barrelItems,
-              id: 'minecraft:barrel',
-              CustomName: preset.name
+              Items: containerItems,
+              id: container.id.includes('shulker') ? 'minecraft:shulker_box' : 'minecraft:chest'
             },
             display: {
-              Lore: ['"(+NBT)"'],
-              Name: preset.name
+              Lore: ['"(+NBT)"']
             }
           }
         };
       });
 
-      // If we have raw NBT data, preserve non-barrel items (shulker boxes, command blocks)
-      if (rawNBTData && slotNum === 0) {
-        const originalSlot0 = (rawNBTData as any)['0'];
-        if (Array.isArray(originalSlot0)) {
-          const originalItems = originalSlot0;
-
-          // Keep non-barrel items (shulker boxes, command blocks, etc.)
-          const preservedItems = originalItems.filter((item: any) => {
-            const itemId = item?.id;
-            return itemId !== 'minecraft:barrel' && itemId !== 'minecraft:air';
-          });
-
-          // Combine edited barrels with preserved items
-          nbtValue[String(slotNum)] = [...editedBarrels, ...preservedItems];
-        } else {
-          // Fallback: just use edited barrels
-          nbtValue[String(slotNum)] = editedBarrels;
+      // Build barrel NBT
+      return {
+        id: 'minecraft:barrel',
+        Count: 1,
+        tag: {
+          RepairCost: 0,
+          BlockEntityTag: {
+            Items: barrelItems,
+            id: 'minecraft:barrel',
+            CustomName: preset.name
+          },
+          display: {
+            Lore: ['"(+NBT)"'],
+            Name: preset.name
+          }
         }
+      };
+    });
+
+    // If we have raw NBT data, preserve non-barrel items (shulker boxes, command blocks)
+    if (rawNBTData) {
+      const originalSlot0 = rawNBTData['0'];
+      if (Array.isArray(originalSlot0)) {
+        // Keep non-barrel items (shulker boxes, command blocks, etc.)
+        const preservedItems = originalSlot0.filter((item: any) => {
+          const itemId = item?.id;
+          return itemId !== 'minecraft:barrel' && itemId !== 'minecraft:air';
+        });
+
+        // Combine edited barrels with preserved items
+        nbtValue['0'] = [...editedBarrels, ...preservedItems];
       } else {
-        // Not preserving raw data, just use edited barrels
-        nbtValue[String(slotNum)] = editedBarrels;
+        // Fallback: just use edited barrels
+        nbtValue['0'] = editedBarrels;
       }
+    } else {
+      // Not preserving raw data, just use edited barrels
+      nbtValue['0'] = editedBarrels;
     }
   }
 
+  console.log('Exporting NBT data:', nbtValue);
+
   // Write NBT to buffer
-  const buffer = await write(nbtValue, { rootName: '', compressed: false });
+  const buffer = await write(nbtValue, { rootName: '' });
 
   // Download file
   const blob = new Blob([buffer as BlobPart], { type: 'application/octet-stream' });

@@ -31,11 +31,11 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
   const getPresetSlotItems = (): (PresetSlotItem | null)[] => {
     const slots: (PresetSlotItem | null)[] = Array(9).fill(null);
 
-    if (!rawNBTData?.value?.['0']?.value?.value) {
+    if (!rawNBTData?.['0']) {
       return slots;
     }
 
-    const slot0Items = rawNBTData.value['0'].value.value;
+    const slot0Items = rawNBTData['0'];
     if (!Array.isArray(slot0Items)) {
       return slots;
     }
@@ -43,9 +43,9 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
     slot0Items.forEach((item: any, index: number) => {
       if (index >= 9) return;
 
-      const itemId = item?.id?.value || 'minecraft:air';
-      const count = item?.Count?.value || 1;
-      const displayName = item?.tag?.value?.display?.value?.Name?.value;
+      const itemId = item?.id || 'minecraft:air';
+      const count = item?.Count || 1;
+      const displayName = item?.tag?.display?.Name;
 
       if (itemId !== 'minecraft:air') {
         slots[index] = {
@@ -138,70 +138,37 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
    */
   const createNewBarrel = () => {
     return {
-      id: { type: 'string', value: 'minecraft:barrel' },
-      Count: { type: 'byte', value: 1 },
+      id: 'minecraft:barrel',
+      Count: 1,
       tag: {
-        type: 'compound',
-        value: {
-          display: {
-            type: 'compound',
-            value: {
-              Name: { type: 'string', value: JSON.stringify({ text: 'New Preset' }) }
-            }
-          },
-          BlockEntityTag: {
-            type: 'compound',
-            value: {
-              Items: {
-                type: 'list',
-                value: {
-                  type: 'compound',
-                  value: [
-                    // Container 0: Hotbar (9 slots)
-                    {
-                      id: { type: 'string', value: 'minecraft:chest' },
-                      Count: { type: 'byte', value: 1 },
-                      Slot: { type: 'byte', value: 0 },
-                      tag: {
-                        type: 'compound',
-                        value: {
-                          BlockEntityTag: {
-                            type: 'compound',
-                            value: {
-                              Items: {
-                                type: 'list',
-                                value: { type: 'compound', value: [] }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    // Container 1: Main Inventory (27 slots)
-                    {
-                      id: { type: 'string', value: 'minecraft:chest' },
-                      Count: { type: 'byte', value: 1 },
-                      Slot: { type: 'byte', value: 1 },
-                      tag: {
-                        type: 'compound',
-                        value: {
-                          BlockEntityTag: {
-                            type: 'compound',
-                            value: {
-                              Items: {
-                                type: 'list',
-                                value: { type: 'compound', value: [] }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
+        display: {
+          Name: JSON.stringify({ text: 'New Preset' })
+        },
+        BlockEntityTag: {
+          Items: [
+            // Container 0: Hotbar (9 slots)
+            {
+              id: 'minecraft:chest',
+              Count: 1,
+              Slot: 0,
+              tag: {
+                BlockEntityTag: {
+                  Items: []
+                }
+              }
+            },
+            // Container 1: Main Inventory (27 slots)
+            {
+              id: 'minecraft:chest',
+              Count: 1,
+              Slot: 1,
+              tag: {
+                BlockEntityTag: {
+                  Items: []
                 }
               }
             }
-          }
+          ]
         }
       }
     };
@@ -211,7 +178,7 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
    * Add barrel directly at the specified position (for empty slot clicks)
    */
   const addBarrelAtPosition = (position: number) => {
-    if (!rawNBTData?.value?.['0']?.value?.value) return;
+    if (!rawNBTData?.['0']) return;
 
     // Double-check that we're not overwriting a protected item
     const existingItem = presetSlotItems[position];
@@ -221,11 +188,11 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
     }
 
     const newBarrel = createNewBarrel();
-    const slot0Items = [...rawNBTData.value['0'].value.value];
+    const slot0Items = [...rawNBTData['0']];
     slot0Items[position] = newBarrel;
 
     const newRawData = JSON.parse(JSON.stringify(rawNBTData));
-    newRawData.value['0'].value.value = slot0Items;
+    newRawData['0'] = slot0Items;
     updateRawNBTData(newRawData);
 
     onSelectPreset(position);
@@ -236,21 +203,21 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
    * Add new barrel preset (for context menu - inserts after specified index)
    */
   const handleAddBarrel = (afterIndex: number) => {
-    if (!rawNBTData?.value?.['0']?.value?.value) return;
+    if (!rawNBTData?.['0']) return;
 
     const newBarrel = createNewBarrel();
-    const slot0Items = [...rawNBTData.value['0'].value.value];
+    const slot0Items = [...rawNBTData['0']];
     slot0Items.splice(afterIndex + 1, 0, newBarrel);
 
     while (slot0Items.length < 9) {
       slot0Items.push({
-        id: { type: 'string', value: 'minecraft:air' },
-        Count: { type: 'byte', value: 1 }
+        id: 'minecraft:air',
+        Count: 1
       });
     }
 
     const newRawData = JSON.parse(JSON.stringify(rawNBTData));
-    newRawData.value['0'].value.value = slot0Items.slice(0, 9);
+    newRawData['0'] = slot0Items.slice(0, 9);
     updateRawNBTData(newRawData);
 
     onSelectPreset(afterIndex + 1);
@@ -275,16 +242,16 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
       return;
     }
 
-    if (!rawNBTData?.value?.['0']?.value?.value) return;
+    if (!rawNBTData?.['0']) return;
 
-    const slot0Items = [...rawNBTData.value['0'].value.value];
+    const slot0Items = [...rawNBTData['0']];
     slot0Items[index] = {
-      id: { type: 'string', value: 'minecraft:air' },
-      Count: { type: 'byte', value: 1 }
+      id: 'minecraft:air',
+      Count: 1
     };
 
     const newRawData = JSON.parse(JSON.stringify(rawNBTData));
-    newRawData.value['0'].value.value = slot0Items;
+    newRawData['0'] = slot0Items;
     updateRawNBTData(newRawData);
 
     setContextMenu(null);
@@ -294,15 +261,15 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
    * Move preset to target slot (swap)
    */
   const handleMoveToSlot = (fromIndex: number, toIndex: number) => {
-    if (!rawNBTData?.value?.['0']?.value?.value) return;
+    if (!rawNBTData?.['0']) return;
 
-    const slot0Items = [...rawNBTData.value['0'].value.value];
+    const slot0Items = [...rawNBTData['0']];
     const temp = slot0Items[fromIndex];
     slot0Items[fromIndex] = slot0Items[toIndex];
     slot0Items[toIndex] = temp;
 
     const newRawData = JSON.parse(JSON.stringify(rawNBTData));
-    newRawData.value['0'].value.value = slot0Items;
+    newRawData['0'] = slot0Items;
     updateRawNBTData(newRawData);
 
     if (selectedPreset === fromIndex) {

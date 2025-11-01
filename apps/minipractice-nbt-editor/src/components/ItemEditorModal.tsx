@@ -265,9 +265,9 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
             )}
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-[280px] overflow-y-auto">
               <div className="grid grid-cols-6 gap-2">
-                {items.map((itemId) => (
+                {items.map((itemId, index) => (
                   <button
-                    key={itemId}
+                    key={`${itemId}-${index}`}
                     onClick={() => handleItemClick(itemId)}
                     className={`aspect-square p-2 rounded-lg border-2 transition-colors flex flex-col items-center justify-center gap-1 ${
                       selectedItemId === itemId
@@ -360,7 +360,7 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
                     const maxLevel = enchInfo?.maxLevel || 5;
 
                     return (
-                      <div key={index} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                      <div key={`${ench.id}-${index}`} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-2 rounded">
                         <select
                           value={ench.id}
                           onChange={(e) => {
