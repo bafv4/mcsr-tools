@@ -1,4 +1,4 @@
-import { read, write, NBTData } from 'nbtify';
+import { read, write } from 'nbtify';
 import { downloadFile } from '@mcsr-tools/utils';
 import type { NBTItem, Enchantment } from '@mcsr-tools/types';
 
@@ -22,7 +22,7 @@ export interface HotbarData {
 
 export interface ParsedNBTResult {
   data: HotbarData;
-  raw: NBTData;
+  raw: any;
 }
 
 /**
@@ -142,7 +142,7 @@ export async function parseNBTFile(file: File): Promise<ParsedNBTResult> {
 
   return {
     data: { presets },
-    raw: parsed as NBTData
+    raw: parsed
   };
 }
 
@@ -163,7 +163,7 @@ function parseJSONText(text: string): string {
  */
 export async function exportNBTFile(
   hotbarData: HotbarData,
-  rawNBTData: NBTData | null = null,
+  rawNBTData: any | null = null,
   filename: string = 'hotbar.nbt'
 ): Promise<void> {
   // If we have raw NBT data, use it as base and only update slot 0
@@ -323,9 +323,9 @@ export async function exportNBTFile(
   }
 
   // Write NBT to buffer
-  const buffer = await write(nbtValue, { rootName: '', compressed: false, bedrockLevel: null });
+  const buffer = await write(nbtValue, { rootName: '', compressed: false });
 
   // Download file
-  const blob = new Blob([buffer], { type: 'application/octet-stream' });
+  const blob = new Blob([buffer as BlobPart], { type: 'application/octet-stream' });
   downloadFile(blob, filename);
 }
