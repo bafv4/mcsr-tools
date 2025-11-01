@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
-import inject from '@rollup/plugin-inject';
 
 // Plugin to copy shared assets from packages/ui/public to app's public
 function copySharedAssets() {
@@ -57,25 +56,23 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      buffer: 'buffer',
+      buffer: 'buffer/',
+      process: 'process/browser.js',
     },
   },
   define: {
-    'process.env': {},
-    global: 'globalThis',
+    'process.env': '{}',
+    'global': 'globalThis',
   },
   server: {
     port: 3001,
   },
   build: {
     chunkSizeWarningLimit: 1600,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
-      plugins: [
-        inject({
-          Buffer: ['buffer', 'Buffer'],
-          process: 'process/browser',
-        }),
-      ],
       output: {
         manualChunks(id) {
           // Split vendor chunks
@@ -97,6 +94,7 @@ export default defineConfig({
       define: {
         global: 'globalThis',
       },
+      inject: [path.resolve(__dirname, './polyfills.js')],
     },
   },
 });

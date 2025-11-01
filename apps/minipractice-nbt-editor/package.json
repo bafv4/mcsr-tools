@@ -21,7 +21,6 @@
     "zustand": "^4.5.0"
   },
   "devDependencies": {
-    "@rollup/plugin-inject": "^5.0.5",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^6.19.1",
