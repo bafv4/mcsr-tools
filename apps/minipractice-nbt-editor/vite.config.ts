@@ -56,8 +56,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      buffer: 'buffer/',
-      process: 'process/browser.js',
+      buffer: 'buffer',
+      process: 'process/browser',
     },
   },
   define: {
