@@ -32,13 +32,14 @@ export function ItemSlot({ item, selected, onClick, onContextMenu, slotType = 'n
 
   // Build tooltip content with enchantments
   const getTooltipContent = () => {
-    if (!item) return null;
+    if (!item || isEmpty) return null;
 
     return (
       <div className="text-left">
-        <div className="font-semibold">{formatItemName(item.id)}</div>
+        <div className="font-semibold text-white">{formatItemName(item.id)}</div>
+        <div className="text-xs text-gray-400 mt-0.5">{item.id}</div>
         {hasEnchantments && (
-          <div className="mt-1 text-xs text-purple-300">
+          <div className="mt-2 text-xs text-purple-300">
             {item.tag!.Enchantments!.map((ench, i) => (
               <div key={i}>{formatEnchantmentName(ench.id, ench.lvl)}</div>
             ))}
