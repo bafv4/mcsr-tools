@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
+import nodePolyfills from 'vite-plugin-node-stdlib-browser';
 
 // Plugin to copy shared assets from packages/ui/public to app's public
 function copySharedAssets() {
@@ -49,7 +50,11 @@ function copyRecursive(src: string, dest: string) {
 }
 
 export default defineConfig({
-  plugins: [react(), copySharedAssets()],
+  plugins: [
+    react(),
+    copySharedAssets(),
+    nodePolyfills(),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -59,6 +64,22 @@ export default defineConfig({
     port: 3001,
   },
   build: {
-    chunkSizeWarningLimit: 1000, // Increase limit to 1000 kB
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Split vendor chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('prismarine-nbt')) {
+              return 'nbt';
+            }
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
 });

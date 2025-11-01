@@ -22,7 +22,9 @@
       "Bash(node -e:*)",
       "Bash(pnpm dev:*)",
       "Bash(pnpm install:*)",
-      "Bash(pnpm dev)"
+      "Bash(pnpm dev)",
+      "Bash(node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js:*)",
+      "Bash(pnpm remove:*)"
     ],
     "deny": [],
     "ask": []

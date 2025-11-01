@@ -1,0 +1,9 @@
+{
+  "buildCommand": "cd ../.. && pnpm install && pnpm --filter @mcsr-tools/minipractice-nbt-editor build",
+  "outputDirectory": "dist",
+  "framework": null,
+  "installCommand": "echo 'Skipping install'",
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  }
+}
