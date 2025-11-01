@@ -56,8 +56,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      buffer: 'buffer',
-      process: 'process/browser',
     },
   },
   define: {
@@ -83,6 +81,9 @@ export default defineConfig({
             if (id.includes('react') || id.includes('react-dom')) {
               return 'react-vendor';
             }
+            if (id.includes('buffer')) {
+              return 'polyfills';
+            }
             return 'vendor';
           }
         },
@@ -90,6 +91,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
+    include: ['buffer', 'process/browser'],
     esbuildOptions: {
       define: {
         global: 'globalThis',
