@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { copyFileSync, mkdirSync, existsSync, readdirSync } from 'fs';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import inject from '@rollup/plugin-inject';
 
 // Plugin to copy shared assets from packages/ui/public to app's public
 function copySharedAssets() {
@@ -53,22 +53,16 @@ export default defineConfig({
   plugins: [
     react(),
     copySharedAssets(),
-    nodePolyfills({
-      // Specific polyfills for prismarine-nbt
-      include: ['buffer', 'process', 'util'],
-      globals: {
-        Buffer: true,
-        process: true,
-      },
-      overrides: {
-        fs: 'memfs',
-      },
-    }),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      buffer: 'buffer',
     },
+  },
+  define: {
+    'process.env': {},
+    global: 'globalThis',
   },
   server: {
     port: 3001,
@@ -76,6 +70,12 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
+      plugins: [
+        inject({
+          Buffer: ['buffer', 'Buffer'],
+          process: 'process/browser',
+        }),
+      ],
       output: {
         manualChunks(id) {
           // Split vendor chunks
@@ -89,6 +89,13 @@ export default defineConfig({
             return 'vendor';
           }
         },
+      },
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
       },
     },
   },
