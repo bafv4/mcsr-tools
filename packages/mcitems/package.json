@@ -1,0 +1,31 @@
+{
+  "name": "@mcsr-tools/mcitems",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "generate:textures": "node scripts/generate-texture-map.js"
+  },
+  "dependencies": {
+    "@mcsr-tools/types": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.3.1",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "typescript": "^5.3.3"
+  }
+}

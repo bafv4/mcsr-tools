@@ -42,6 +42,7 @@ export interface NBTItem {
   tag?: {
     Enchantments?: Enchantment[];
     Damage?: number;
+    Potion?: string;  // Potion effect ID (e.g., "minecraft:swiftness")
     display?: {
       Name?: string;
     };
