@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MinecraftItemIcon } from '@mcsr-tools/ui';
+import { MinecraftItemIcon } from '@mcsr-tools/mcitems';
 import { useInventoryStore } from '../store/useInventoryStore';
 import { Tooltip } from './Tooltip';
 
@@ -343,7 +343,7 @@ export function PresetManager({ onSelectPreset, onPresetNameChange }: PresetMana
               {/* Preset name display */}
               {presetName && (
                 <div className="absolute -bottom-9 left-1/2 transform -translate-x-1/2 w-24">
-                  <div className="text-xs text-gray-700 dark:text-gray-200 font-semibold text-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded truncate">
+                  <div className="text-xs text-gray-900 dark:text-gray-100 font-semibold text-center bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded truncate">
                     {presetName}
                   </div>
                 </div>

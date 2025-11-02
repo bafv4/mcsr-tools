@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Modal, MinecraftItemIcon } from '@mcsr-tools/ui';
-import { useInventoryStore } from '../store/useInventoryStore';
+import { Button, Input, Modal } from '@mcsr-tools/ui';
 import {
-  getItemsForArmorSlot,
-  getMaxStackSize,
-  isStackable,
-  getApplicableEnchantments,
-  getEnchantmentInfo,
-  type ArmorType
-} from '@mcsr-tools/utils';
-import {
+  MinecraftItemIcon,
   ITEM_CATEGORIES,
   getItemsByCategory,
   searchItems,
   formatItemName,
-} from '../data/minecraftItems';
+} from '@mcsr-tools/mcitems';
+import {
+  getMaxStackSize,
+  isStackable,
+  getApplicableEnchantments,
+  getEnchantmentInfo,
+  getItemsForArmorSlot,
+  type ArmorType
+} from '@mcsr-tools/utils';
+import { useInventoryStore } from '../store/useInventoryStore';
 import type { ItemCategory, Enchantment } from '@mcsr-tools/types';
 
 interface ItemEditorModalProps {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button, Input } from '@mcsr-tools/ui';
 import { useInventoryStore } from '../store/useInventoryStore';
-import { formatItemName } from '../data/minecraftItems';
+import { formatItemName } from '@mcsr-tools/mcitems';
 
 export function ItemEditor() {
   const { presets, selectedPreset, selectedContainer, selectedItem, updateItem, deleteItem } = useInventoryStore();

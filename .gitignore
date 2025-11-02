@@ -51,3 +51,8 @@ scripts/node_modules
 scripts/package-lock.json
 scripts/pnpm-lock.yaml
 nul
+
+apps/mc-texture-extractor/*
+apps/mc-texture-renderer/*
+packages/mcitems/scripts/generate-texture-map.js
+packages/mcitems/scripts/organize-textures.js

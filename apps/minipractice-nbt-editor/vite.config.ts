@@ -58,8 +58,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
   server: {
     port: 3001,
+    fs: {
+      // Allow serving files from workspace packages
+      allow: ['..', '../..'],
+    },
+  },
+  optimizeDeps: {
+    include: ['@mcsr-tools/mcitems'],
   },
   build: {
     chunkSizeWarningLimit: 1000,

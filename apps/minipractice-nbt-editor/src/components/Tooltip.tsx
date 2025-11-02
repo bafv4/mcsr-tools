@@ -50,7 +50,7 @@ export function Tooltip({ content, children }: TooltipProps) {
       <div ref={containerRef}>{children}</div>
       {isVisible && (
         <div
-          className="fixed px-3 py-2.5 pointer-events-none z-[9999] bg-gray-900 dark:bg-gray-800 border border-gray-700 dark:border-gray-600 rounded-lg shadow-xl"
+          className="fixed px-3 py-2.5 pointer-events-none z-[9999] bg-gray-900 dark:bg-gray-800 border border-gray-700 dark:border-gray-600 rounded-lg shadow-xl text-white"
           style={{
             left: `${position.x + 16}px`,
             top: `${position.y + 16}px`,

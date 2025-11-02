@@ -1,19 +1,10 @@
+import { MinecraftItemIcon, formatItemName } from '@mcsr-tools/mcitems';
 import { isStackable, formatEnchantmentName } from '@mcsr-tools/utils';
-import { MinecraftItemIcon } from '@mcsr-tools/ui';
-import { formatItemName } from '../data/minecraftItems';
-import type { Enchantment } from '@mcsr-tools/types';
+import type { NBTItem } from '@mcsr-tools/types';
 import { Tooltip } from './Tooltip';
 
 interface ItemSlotProps {
-  item?: {
-    id: string;
-    Count: number;
-    Slot?: number;
-    tag?: {
-      Enchantments?: Enchantment[];
-      Damage?: number;
-    };
-  } | null;
+  item?: NBTItem | null;
   selected?: boolean;
   onClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
@@ -108,6 +99,7 @@ export function ItemSlot({ item, selected, onClick, onContextMenu, slotType = 'n
           <MinecraftItemIcon
             itemId={item.id}
             size={64}
+            nbtData={item.tag}
           />
 
           {/* Item count - larger with text outline, show for stackable items even if count is 1 */}
