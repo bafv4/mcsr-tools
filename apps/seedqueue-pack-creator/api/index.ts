@@ -1,6 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import fs from 'fs';
-import path from 'path';
 
 // List of bot user agents that need OG tags
 const BOT_USER_AGENTS = [
@@ -65,13 +63,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).send(html);
   }
 
-  // For normal users, serve the index.html
+  // For normal users, fetch and serve the index.html from the deployed site
   try {
-    const indexPath = path.join(process.cwd(), 'dist', 'index.html');
-    const indexHtml = fs.readFileSync(indexPath, 'utf-8');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(200).send(indexHtml);
+    const indexUrl = `${protocol}://${host}/index.html`;
+    const indexResponse = await fetch(indexUrl);
+
+    if (indexResponse.ok) {
+      const indexHtml = await indexResponse.text();
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(indexHtml);
+    }
+
+    // Fallback: redirect to /index.html
+    return res.redirect(307, '/index.html');
   } catch (error) {
-    return res.status(500).send('Error loading page');
+    console.error('Error loading index.html:', error);
+    // Fallback: redirect to /index.html
+    return res.redirect(307, '/index.html');
   }
 }
