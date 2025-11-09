@@ -90,20 +90,7 @@ function App() {
     const layoutParam = params.get('layout');
     const resolutionParam = params.get('resolution');
 
-    if (layoutParam) {
-      try {
-        const decodedLayout = JSON.parse(atob(layoutParam));
-        setLayout(decodedLayout);
-
-        // If layout is loaded but no resolution parameter, default to 1920x1080
-        if (!resolutionParam) {
-          setResolution({ width: 1920, height: 1080 });
-        }
-      } catch (error) {
-        console.error('Failed to load layout from URL:', error);
-      }
-    }
-
+    // First, set the resolution before loading the layout
     if (resolutionParam) {
       try {
         const [width, height] = resolutionParam.split('x').map(Number);
@@ -117,6 +104,19 @@ function App() {
         console.error('Failed to load resolution from URL:', error);
         // If resolution parsing fails, default to 1920x1080
         setResolution({ width: 1920, height: 1080 });
+      }
+    } else if (layoutParam) {
+      // If layout is present but no resolution parameter, default to 1920x1080
+      setResolution({ width: 1920, height: 1080 });
+    }
+
+    // Then, load the layout after resolution is set
+    if (layoutParam) {
+      try {
+        const decodedLayout = JSON.parse(atob(layoutParam));
+        setLayout(decodedLayout);
+      } catch (error) {
+        console.error('Failed to load layout from URL:', error);
       }
     }
   }, [setLayout, setResolution]);
