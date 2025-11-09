@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Modal, Button } from '@mcsr-tools/ui';
+import { useState, useEffect } from 'react';
+import { Modal, Button, Input } from '@mcsr-tools/ui';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -9,10 +9,25 @@ interface ShareModalProps {
 
 export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const [shareName, setShareName] = useState('');
+  const [finalShareUrl, setFinalShareUrl] = useState(shareUrl);
+
+  useEffect(() => {
+    // Update URL with share name
+    if (shareUrl) {
+      const url = new URL(shareUrl);
+      if (shareName.trim()) {
+        url.searchParams.set('name', shareName.trim());
+      } else {
+        url.searchParams.delete('name');
+      }
+      setFinalShareUrl(url.toString());
+    }
+  }, [shareUrl, shareName]);
 
   const handleCopyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(finalShareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -22,14 +37,31 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
   };
 
   const handleShareToTwitter = () => {
-    const text = '';
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+    const text = shareName.trim() ? shareName.trim() : 'SeedQueue Wall Maker';
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(finalShareUrl)}`;
     window.open(twitterUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="レイアウトを共有">
       <div className="space-y-6">
+        {/* Share Name Section */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+            共有名（任意）
+          </label>
+          <Input
+            type="text"
+            value={shareName}
+            onChange={(e) => setShareName(e.target.value)}
+            placeholder="例: 私のレイアウト"
+            className="w-full"
+          />
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+            SNSで共有する際に表示される名前です
+          </p>
+        </div>
+
         {/* URL Copy Section */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
@@ -38,7 +70,7 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
           <div className="flex gap-2">
             <input
               type="text"
-              value={shareUrl}
+              value={finalShareUrl}
               readOnly
               className="flex-1 px-3 py-2 border border-default rounded text-sm bg-gray-50 dark:bg-gray-700 text-primary font-mono"
               onClick={(e) => e.currentTarget.select()}

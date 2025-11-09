@@ -38,7 +38,10 @@
       "Bash(mv:*)",
       "Bash(pnpm list:*)",
       "Bash(git checkout:*)",
-      "Bash(pnpm update:*)"
+      "Bash(pnpm update:*)",
+      "Bash(nul)",
+      "Bash(exit 0)",
+      "Bash(dir /b \"c:\\Users\\yuanq\\OneDrive\\デスクトップ\\mcsr-tools\\apps\\seedqueue-pack-creator\\dist\")"
     ],
     "deny": [],
     "ask": []
