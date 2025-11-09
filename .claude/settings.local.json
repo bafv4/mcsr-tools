@@ -37,7 +37,8 @@
       "Bash(pnpm --filter @mcsr-tools/mcitems build:*)",
       "Bash(mv:*)",
       "Bash(pnpm list:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(pnpm update:*)"
     ],
     "deny": [],
     "ask": []
