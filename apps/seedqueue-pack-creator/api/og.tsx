@@ -1,9 +1,5 @@
 import { ImageResponse } from '@vercel/og';
 
-export const config = {
-  runtime: 'edge',
-};
-
 interface Area {
   x: number;
   y: number;
