@@ -16,6 +16,7 @@
     "@mcsr-tools/types": "workspace:*",
     "@mcsr-tools/ui": "workspace:*",
     "@mcsr-tools/utils": "workspace:*",
+    "@vercel/node": "^5.5.5",
     "@vercel/og": "^0.8.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
