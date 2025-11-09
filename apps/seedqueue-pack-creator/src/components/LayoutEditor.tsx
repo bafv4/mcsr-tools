@@ -4,7 +4,11 @@ import { getPresets } from '../data/presets';
 import { AreaEditor } from './AreaEditor';
 import { Select, Button, Switch } from '@mcsr-tools/ui';
 
-export const LayoutEditor = memo(function LayoutEditor() {
+interface LayoutEditorProps {
+  onShowTips?: () => void;
+}
+
+export const LayoutEditor = memo(function LayoutEditor({ onShowTips }: LayoutEditorProps) {
   const { resolution, setLayout, replaceLockedInstances, setReplaceLockedInstances } = useWallStore();
   const [selectedPreset, setSelectedPreset] = useState('');
 
@@ -61,7 +65,7 @@ export const LayoutEditor = memo(function LayoutEditor() {
       </div>
 
       <div className="space-y-4">
-        <AreaEditor area="main" title="Main" color="#2563eb" allowGridToggle />
+        <AreaEditor area="main" title="Main" color="#2563eb" allowGridToggle onShowTips={onShowTips} />
         <AreaEditor area="locked" title="Locked" color="#ea580c" showToggle />
         <AreaEditor area="preparing" title="Preparing" color="#16a34a" showToggle />
       </div>

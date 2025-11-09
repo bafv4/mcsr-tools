@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useWallStore } from './store/useWallStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Select, VersionChip } from '@mcsr-tools/ui';
 import type { VersionInfo } from '@mcsr-tools/ui';
@@ -6,26 +6,39 @@ import { PackInfo } from './components/PackInfo';
 import { BackgroundSettings } from './components/BackgroundSettings';
 import { LayoutEditor } from './components/LayoutEditor';
 import { SoundSettings } from './components/SoundSettings';
+import { LockImageSettings } from './components/LockImageSettings';
+import { TipsModal } from './components/TipsModal';
+import { ShareModal } from './components/ShareModal';
+import { ImportModal } from './components/ImportModal';
 import { WallPreview } from './components/WallPreview';
 import { exportResourcePack } from './utils/packExport';
-import { importResourcePack } from './utils/packImport';
 
 const versionInfo: VersionInfo = {
   appName: 'SeedQueue Wall Maker',
-  version: 'v2.2',
+  version: 'v2.3.0',
   author: 'baf',
   authorUrl: 'https://github.com/bafv4',
   repoUrl: 'https://github.com/bafv4/mcsr-tools',
   changelog: [
     {
-      version: 'v2.2',
+      version: 'v2.3.0',
+      date: '2025-11-09',
+      changes: [
+        'ロック画像設定機能を追加',
+        '画像・エリア調整機能の改善',
+        'インポート機能の改善',
+        'Removed Herobrine',
+      ],
+    },
+    {
+      version: 'v2.2.0',
       date: '2025-10-30',
       changes: [
         'プリセットを反映したときに使えないリソースパックが生成される問題を修正',
       ],
     },
     {
-      version: 'v2.1',
+      version: 'v2.1.0',
       date: '2025-10-28',
       changes: [
         'Padding調整機能を追加',
@@ -34,7 +47,7 @@ const versionInfo: VersionInfo = {
       ],
     },
     {
-      version: 'v2.0',
+      version: 'v2.0.0',
       date: '2025-10-27',
       changes: [
         '初回リリース',
@@ -50,51 +63,69 @@ function App() {
     background,
     resolution,
     sounds,
+    lockImages,
     replaceLockedInstances,
     setResolution,
+    setLayout,
     resetToDefault,
     importData,
   } = useWallStore();
-  const importInputRef = useRef<HTMLInputElement>(null);
   const [customResolution, setCustomResolution] = useState({ width: '', height: '' });
   const [showCustomResolution, setShowCustomResolution] = useState(false);
+  const [showTipsModal, setShowTipsModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+
+  // Load layout from URL parameter on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const layoutParam = params.get('layout');
+
+    if (layoutParam) {
+      try {
+        const decodedLayout = JSON.parse(atob(layoutParam));
+        setLayout(decodedLayout);
+      } catch (error) {
+        console.error('Failed to load layout from URL:', error);
+      }
+    }
+  }, [setLayout]);
 
   const handleDownload = async () => {
     try {
-      await exportResourcePack(packInfo, layout, background, resolution, sounds, replaceLockedInstances);
+      await exportResourcePack(packInfo, layout, background, resolution, sounds, lockImages, replaceLockedInstances);
     } catch (error) {
       console.error('Export failed:', error);
       alert('リソースパックのエクスポートに失敗しました');
     }
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImport = (data: any, resolution: { width: number; height: number }) => {
+    // Only import fields that exist (not null)
+    const importPayload: any = {};
+    if (data.packInfo) importPayload.packInfo = data.packInfo;
 
-    try {
-      const data = await importResourcePack(file);
+    // Use the resolution from modal instead of detected resolution
+    importPayload.resolution = resolution;
 
-      // Only import fields that exist (not null)
-      const importPayload: any = {};
-      if (data.packInfo) importPayload.packInfo = data.packInfo;
-      if (data.resolution) importPayload.resolution = data.resolution;
-      if (data.layout) importPayload.layout = data.layout;
-      if (data.background) importPayload.background = data.background;
-      if (data.sounds) importPayload.sounds = data.sounds;
-      if (typeof data.replaceLockedInstances === 'boolean') importPayload.replaceLockedInstances = data.replaceLockedInstances;
+    if (data.layout) importPayload.layout = data.layout;
 
-      importData(importPayload);
-      alert('リソースパックを読み込みました');
-    } catch (error) {
-      console.error('Import failed:', error);
-      alert('リソースパックの読み込みに失敗しました');
+    // Update background with correct crop dimensions for the selected resolution
+    if (data.background) {
+      importPayload.background = {
+        ...data.background,
+        imageCropWidth: resolution.width,
+        imageCropHeight: resolution.height,
+      };
     }
 
-    // Reset input
-    if (importInputRef.current) {
-      importInputRef.current.value = '';
-    }
+    if (data.sounds) importPayload.sounds = data.sounds;
+    if (data.lockImages) importPayload.lockImages = data.lockImages;
+    if (typeof data.replaceLockedInstances === 'boolean') importPayload.replaceLockedInstances = data.replaceLockedInstances;
+
+    importData(importPayload);
+    alert('リソースパックを読み込みました');
   };
 
   const handleResolutionChange = (value: string) => {
@@ -115,6 +146,17 @@ function App() {
     }
   };
 
+  const handleShare = () => {
+    // Encode layout to base64
+    const layoutData = btoa(JSON.stringify(layout));
+
+    // Create share URL with layout parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('layout', layoutData);
+    setShareUrl(url.toString());
+    setShowShareModal(true);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-app">
       <header className="app-header flex-shrink-0">
@@ -128,17 +170,22 @@ function App() {
             </div>
             <div className="flex items-center gap-6">
               {!showCustomResolution ? (
-                <div className="w-48">
-                  <Select
-                    value={`${resolution.width}x${resolution.height}`}
-                    onChange={(e) => handleResolutionChange(e.target.value)}
-                    options={[
-                      { value: '1920x1080', label: 'FHD (1920x1080)' },
-                      { value: '2560x1440', label: 'WQHD (2560x1440)' },
-                      { value: '3840x2160', label: '4K (3840x2160)' },
-                      { value: 'custom', label: 'カスタム...' },
-                    ]}
-                  />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-secondary whitespace-nowrap">
+                    画面サイズ
+                  </label>
+                  <div className="w-48">
+                    <Select
+                      value={`${resolution.width}x${resolution.height}`}
+                      onChange={(e) => handleResolutionChange(e.target.value)}
+                      options={[
+                        { value: '1920x1080', label: 'FHD (1920x1080)' },
+                        { value: '2560x1440', label: 'WQHD (2560x1440)' },
+                        { value: '3840x2160', label: '4K (3840x2160)' },
+                        { value: 'custom', label: 'カスタム...' },
+                      ]}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -175,21 +222,46 @@ function App() {
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <input
-                  ref={importInputRef}
-                  type="file"
-                  accept=".zip"
-                  onChange={handleImport}
-                  className="hidden"
-                />
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => importInputRef.current?.click()}
+                  onClick={() => setShowImportModal(true)}
                 >
                   インポート
                 </Button>
-                <Button variant="secondary" size="sm" onClick={resetToDefault}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  title="レイアウトを共有"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="18" cy="5" r="3" />
+                    <circle cx="6" cy="12" r="3" />
+                    <circle cx="18" cy="19" r="3" />
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                  </svg>
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm('編集中の内容をリセットします。よろしいですか？')) {
+                      resetToDefault();
+                    }
+                  }}
+                >
                   リセット
                 </Button>
                 <Button size="sm" onClick={handleDownload}>ダウンロード</Button>
@@ -211,6 +283,7 @@ function App() {
                       <TabsTrigger value="info">情報</TabsTrigger>
                       <TabsTrigger value="background">背景</TabsTrigger>
                       <TabsTrigger value="layout">レイアウト</TabsTrigger>
+                      <TabsTrigger value="lockImages">ロック画像</TabsTrigger>
                       <TabsTrigger value="sound">サウンド</TabsTrigger>
                     </TabsList>
                   </div>
@@ -225,7 +298,11 @@ function App() {
                     </TabsContent>
 
                     <TabsContent value="layout" className="mt-0">
-                      <LayoutEditor />
+                      <LayoutEditor onShowTips={() => setShowTipsModal(true)} />
+                    </TabsContent>
+
+                    <TabsContent value="lockImages" className="mt-0">
+                      <LockImageSettings />
                     </TabsContent>
 
                     <TabsContent value="sound" className="mt-0">
@@ -251,6 +328,10 @@ function App() {
           </div>
         </div>
       </main>
+
+      <TipsModal isOpen={showTipsModal} onClose={() => setShowTipsModal(false)} />
+      <ShareModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} shareUrl={shareUrl} />
+      <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleImport} />
     </div>
   );
 }

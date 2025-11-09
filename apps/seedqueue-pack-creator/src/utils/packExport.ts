@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { downloadFile } from '@mcsr-tools/utils';
-import { PackInfo, WallLayout, BackgroundSettings, Resolution, SoundSettings } from '../store/useWallStore';
+import { PackInfo, WallLayout, BackgroundSettings, Resolution, SoundSettings, LockImageSettings } from '../store/useWallStore';
 
 async function dataURLToBlob(dataURL: string): Promise<Blob> {
   const response = await fetch(dataURL);
@@ -79,6 +79,7 @@ export async function exportResourcePack(
   background: BackgroundSettings,
   resolution: Resolution,
   sounds: SoundSettings,
+  lockImages: LockImageSettings,
   replaceLockedInstances: boolean
 ) {
   const zip = new JSZip();
@@ -197,6 +198,35 @@ export async function exportResourcePack(
   if (backgroundBlob) {
     texturesFolder?.file('background.png', backgroundBlob);
   }
+
+  // Add lock images
+  if (!lockImages.enabled) {
+    // Disabled: create a transparent 1x1 PNG as lock.png
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, 1, 1);
+      const transparentBlob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      });
+      if (transparentBlob) {
+        texturesFolder?.file('lock.png', transparentBlob);
+      }
+    }
+  } else if (lockImages.images.length === 1) {
+    // Exactly 1 image: export as lock.png
+    const lockImageBlob = await dataURLToBlob(lockImages.images[0]);
+    texturesFolder?.file('lock.png', lockImageBlob);
+  } else if (lockImages.images.length > 1) {
+    // 2 or more images: export as lock-1.png, lock-2.png, etc.
+    for (let i = 0; i < lockImages.images.length; i++) {
+      const lockImageBlob = await dataURLToBlob(lockImages.images[i]);
+      texturesFolder?.file(`lock-${i + 1}.png`, lockImageBlob);
+    }
+  }
+  // Enabled without custom images: don't add any lock image file (use default)
 
   // Add sound files
   // Built-in sounds (replace existing based on flag)

@@ -34,7 +34,10 @@
       "Bash(node dist/index.js:*)",
       "Bash(node scripts/organize-textures.js:*)",
       "Bash(node scripts/generate-texture-map.js:*)",
-      "Bash(pnpm --filter @mcsr-tools/mcitems build:*)"
+      "Bash(pnpm --filter @mcsr-tools/mcitems build:*)",
+      "Bash(mv:*)",
+      "Bash(pnpm list:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

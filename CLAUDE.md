@@ -8,8 +8,7 @@ MCSR Tools is a monorepo containing web applications for Minecraft Speedrunning 
 
 **Applications:**
 - **SeedQueue Pack Creator** - Creates Minecraft resource packs for the SeedQueue mod
-- **MiniPracticeKit NBT Editor** - NBT file editor for MiniPracticeKit (WIP)
-- **Key & Settings Editor** - AutoHotKey remap support and StandardSettings key editor (WIP)
+- **MCSR Config Tool** - Generates StandardSettings configuration files and AutoHotkey scripts for MCSR (WIP)
 
 **Shared Packages:**
 - `@mcsr-tools/ui` - React components with Tailwind CSS and class-variance-authority

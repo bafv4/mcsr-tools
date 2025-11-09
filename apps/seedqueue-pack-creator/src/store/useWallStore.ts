@@ -43,6 +43,11 @@ export interface PackInfo {
   icon: string | null;
 }
 
+export interface LockImageSettings {
+  enabled: boolean; // Whether to use lock images
+  images: string[]; // Array of image data URLs
+}
+
 export interface SoundSettings {
   // Built-in sounds (can be replaced with .ogg files)
   lockInstance: string | null;
@@ -69,6 +74,7 @@ interface WallStore {
   background: BackgroundSettings;
   packInfo: PackInfo;
   sounds: SoundSettings;
+  lockImages: LockImageSettings;
   selectedArea: 'main' | 'locked' | 'preparing' | null;
   replaceLockedInstances: boolean;
 
@@ -78,6 +84,9 @@ interface WallStore {
   setBackground: (background: Partial<BackgroundSettings>) => void;
   setPackInfo: (packInfo: Partial<PackInfo>) => void;
   setSounds: (sounds: Partial<SoundSettings>) => void;
+  setLockImages: (lockImages: Partial<LockImageSettings>) => void;
+  addLockImage: (image: string) => void;
+  removeLockImage: (index: number) => void;
   selectArea: (area: 'main' | 'locked' | 'preparing' | null) => void;
   setReplaceLockedInstances: (value: boolean) => void;
   resetToDefault: () => void;
@@ -161,12 +170,18 @@ const defaultSounds: SoundSettings = {
   finishBenchmark: null,
 };
 
+const defaultLockImages: LockImageSettings = {
+  enabled: true, // Default to enabled
+  images: [],
+};
+
 export const useWallStore = create<WallStore>((set) => ({
   resolution: defaultResolution,
   layout: defaultLayout,
   background: defaultBackground,
   packInfo: defaultPackInfo,
   sounds: defaultSounds,
+  lockImages: defaultLockImages,
   selectedArea: null,
   replaceLockedInstances: false,
 
@@ -223,6 +238,27 @@ export const useWallStore = create<WallStore>((set) => ({
       sounds: { ...state.sounds, ...sounds },
     })),
 
+  setLockImages: (lockImages) =>
+    set((state) => ({
+      lockImages: { ...state.lockImages, ...lockImages },
+    })),
+
+  addLockImage: (image) =>
+    set((state) => ({
+      lockImages: {
+        ...state.lockImages,
+        images: [...state.lockImages.images, image],
+      },
+    })),
+
+  removeLockImage: (index) =>
+    set((state) => ({
+      lockImages: {
+        ...state.lockImages,
+        images: state.lockImages.images.filter((_, i) => i !== index),
+      },
+    })),
+
   selectArea: (area) => set({ selectedArea: area }),
 
   setReplaceLockedInstances: (value) => set({ replaceLockedInstances: value }),
@@ -234,9 +270,28 @@ export const useWallStore = create<WallStore>((set) => ({
       background: defaultBackground,
       packInfo: defaultPackInfo,
       sounds: defaultSounds,
+      lockImages: defaultLockImages,
       selectedArea: null,
       replaceLockedInstances: false,
     }),
 
-  importData: (data) => set((state) => ({ ...state, ...data })),
+  importData: (data) =>
+    set((state) => ({
+      ...state,
+      ...data,
+      // Merge background settings to preserve all properties
+      background: data.background
+        ? { ...state.background, ...data.background }
+        : state.background,
+      // Merge other nested objects
+      packInfo: data.packInfo
+        ? { ...state.packInfo, ...data.packInfo }
+        : state.packInfo,
+      sounds: data.sounds
+        ? { ...state.sounds, ...data.sounds }
+        : state.sounds,
+      lockImages: data.lockImages
+        ? { ...state.lockImages, ...data.lockImages }
+        : state.lockImages,
+    })),
 }));

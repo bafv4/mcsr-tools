@@ -6,7 +6,11 @@ import {
   getItemsByCategory,
   searchItems,
   formatItemName,
+  POTION_EFFECTS,
+  formatPotionName,
+  formatPotionEffect,
 } from '@mcsr-tools/mcitems';
+import { Tooltip } from './Tooltip';
 import {
   getMaxStackSize,
   isStackable,
@@ -31,6 +35,7 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [selectedPotionEffect, setSelectedPotionEffect] = useState<string | null>(null);
   const [itemCount, setItemCount] = useState(1);
   const [initialItemState, setInitialItemState] = useState<{ id: string; count: number } | null>(null);
   const [enchantments, setEnchantments] = useState<Enchantment[]>([]);
@@ -79,12 +84,41 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
   const currentItem = getCurrentItem();
   const isEditMode = currentItem !== null;
 
-  // Get items to display
-  const items = filterByArmorSlot
-    ? getItemsForArmorSlot(filterByArmorSlot)
-    : (searchQuery
-      ? searchItems(searchQuery)
-      : getItemsByCategory(selectedCategory));
+  // Get items to display and expand potions
+  const getItemsToDisplay = (): Array<{ itemId: string; potionEffect?: string }> => {
+    let baseItems: string[];
+
+    if (filterByArmorSlot) {
+      baseItems = getItemsForArmorSlot(filterByArmorSlot);
+    } else if (searchQuery) {
+      baseItems = searchItems(searchQuery);
+    } else {
+      baseItems = getItemsByCategory(selectedCategory);
+    }
+
+    // Expand potions into variants
+    const expandedItems: Array<{ itemId: string; potionEffect?: string }> = [];
+
+    for (const itemId of baseItems) {
+      const isPotion = itemId === 'minecraft:potion' ||
+                      itemId === 'minecraft:splash_potion' ||
+                      itemId === 'minecraft:lingering_potion';
+
+      if (isPotion) {
+        // Add all potion effect variants
+        for (const effect of POTION_EFFECTS) {
+          expandedItems.push({ itemId, potionEffect: effect.id });
+        }
+      } else {
+        // Add normal item
+        expandedItems.push({ itemId });
+      }
+    }
+
+    return expandedItems;
+  };
+
+  const items = getItemsToDisplay();
 
   // Get metadata for selected item
   const maxStackSize = selectedItemId ? getMaxStackSize(selectedItemId) : 64;
@@ -96,6 +130,7 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
       if (currentItem) {
         // Edit mode - load current item and switch to its category
         setSelectedItemId(currentItem.id);
+        setSelectedPotionEffect(currentItem.tag?.Potion || null);
         setItemCount(currentItem.Count);
         setInitialItemState({ id: currentItem.id, count: currentItem.Count });
         setEnchantments(currentItem.tag?.Enchantments || []);
@@ -108,6 +143,7 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
       } else {
         // Add mode - reset
         setSelectedItemId(null);
+        setSelectedPotionEffect(null);
         setItemCount(1);
         setInitialItemState(null);
         setSelectedCategory('all');
@@ -129,8 +165,9 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
     }
   }, [selectedItemId]);
 
-  const handleItemClick = (itemId: string) => {
+  const handleItemClick = (itemId: string, potionEffect?: string) => {
     setSelectedItemId(itemId);
+    setSelectedPotionEffect(potionEffect || null);
   };
 
   const handleSave = () => {
@@ -156,16 +193,25 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
 
     // Save the item (updateItemBySlot handles both add and update, and creates containers if needed)
     const existingItem = currentItem;
+
+    // Build tag object
+    const tag: any = { ...existingItem?.tag };
+
+    // Add enchantments if present
+    if (enchantments.length > 0) {
+      tag.Enchantments = enchantments;
+    }
+
+    // Add potion effect if selected
+    if (selectedPotionEffect) {
+      tag.Potion = selectedPotionEffect;
+    }
+
     updateItemBySlot(selectedPreset, targetContainer, targetSlot, {
       id: selectedItemId,
       Count: itemCount,
       Slot: targetSlot,
-      tag: enchantments.length > 0
-        ? {
-            ...existingItem?.tag,
-            Enchantments: enchantments,
-          }
-        : existingItem?.tag,
+      tag: Object.keys(tag).length > 0 ? tag : undefined,
     });
 
     handleClose();
@@ -266,26 +312,59 @@ export function ItemEditorModal({ isOpen, onClose, slotIndex, filterByArmorSlot 
             )}
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-[280px] overflow-y-auto">
               <div className="grid grid-cols-6 gap-2">
-                {items.map((itemId, index) => (
-                  <button
-                    key={`${itemId}-${index}`}
-                    onClick={() => handleItemClick(itemId)}
-                    className={`aspect-square p-2 rounded-lg border-2 transition-colors flex flex-col items-center justify-center gap-1 ${
-                      selectedItemId === itemId
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 bg-white dark:bg-gray-800'
-                    }`}
-                    title={formatItemName(itemId)}
-                  >
-                    <MinecraftItemIcon
-                      itemId={itemId}
-                      size={48}
-                    />
-                    <div className="text-xs text-center text-secondary break-all line-clamp-1">
-                      {formatItemName(itemId)}
+                {items.map((item, index) => {
+                  const { itemId, potionEffect } = item;
+                  const isSelected = selectedItemId === itemId &&
+                                   (potionEffect ? selectedPotionEffect === potionEffect : !selectedPotionEffect);
+
+                  // Get display name
+                  const isPotion = itemId === 'minecraft:potion' ||
+                                   itemId === 'minecraft:splash_potion' ||
+                                   itemId === 'minecraft:lingering_potion';
+                  const displayName = isPotion && potionEffect
+                    ? formatPotionName(itemId, potionEffect)
+                    : formatItemName(itemId);
+
+                  // Build tooltip content
+                  const tooltipContent = isPotion && potionEffect ? (
+                    <div className="text-left">
+                      <div className="font-semibold text-white text-base">{displayName}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        {formatPotionEffect(potionEffect)}
+                      </div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{itemId}</div>
                     </div>
-                  </button>
-                ))}
+                  ) : (
+                    <div className="text-left">
+                      <div className="font-semibold text-white text-base">{displayName}</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{itemId}</div>
+                    </div>
+                  );
+
+                  return (
+                    <Tooltip key={`${itemId}-${potionEffect || 'none'}-${index}`} content={tooltipContent}>
+                      <button
+                        onClick={() => handleItemClick(itemId, potionEffect)}
+                        className={`w-full min-w-0 aspect-square p-2 rounded-lg border-2 transition-colors flex flex-col items-center justify-center gap-1 ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 bg-white dark:bg-gray-800'
+                        }`}
+                      >
+                        <div className="flex-shrink-0">
+                          <MinecraftItemIcon
+                            itemId={itemId}
+                            size={48}
+                            nbtData={potionEffect ? { Potion: potionEffect } : undefined}
+                          />
+                        </div>
+                        <div className="text-xs text-center text-secondary break-all line-clamp-1 w-full overflow-hidden">
+                          {isPotion && potionEffect ? formatPotionEffect(potionEffect) : displayName}
+                        </div>
+                      </button>
+                    </Tooltip>
+                  );
+                })}
               </div>
               {items.length === 0 && (
                 <div className="text-center text-secondary py-8">

@@ -67,7 +67,11 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@mcsr-tools/mcitems'],
+    exclude: ['@mcsr-tools/mcitems'],
+  },
+  // Ensure JSON files can be imported
+  json: {
+    stringify: false,
   },
   build: {
     chunkSizeWarningLimit: 1000,

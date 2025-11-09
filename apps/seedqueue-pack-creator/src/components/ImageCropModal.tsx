@@ -47,6 +47,7 @@ export function ImageCropModal({
   const [blur, setBlur] = useState(initialAdjustments.blur);
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [originalCropRect, setOriginalCropRect] = useState<typeof cropRect | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
   // Crop rectangle (relative to resolution coordinates)
@@ -58,7 +59,6 @@ export function ImageCropModal({
   });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -107,11 +107,12 @@ export function ImageCropModal({
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return;
 
-    const container = containerRef.current;
-    if (!container) return;
+    const canvasContainer = canvas.parentElement;
+    if (!canvasContainer) return;
 
-    const maxWidth = container.clientWidth;
-    const maxHeight = container.clientHeight - 100;
+    // Use the canvas container's dimensions with some padding
+    const maxWidth = canvasContainer.clientWidth - 40; // 20px padding on each side
+    const maxHeight = canvasContainer.clientHeight - 40; // 20px padding on each side
     const canvasScale = Math.min(maxWidth / resolution.width, maxHeight / resolution.height, 1);
 
     canvas.width = resolution.width * canvasScale;
@@ -123,6 +124,12 @@ export function ImageCropModal({
 
     // Apply transformations
     ctx.save();
+
+    // Clip to canvas bounds to prevent overflow
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height);
+    ctx.clip();
+
     ctx.filter = `brightness(${brightness}%) blur(${blur}px)`;
 
     // Calculate image dimensions preserving aspect ratio
@@ -297,10 +304,11 @@ export function ImageCropModal({
 
     const mode = getDragMode(mouseX, mouseY, canvasScale);
     setDragMode(mode);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragStart({ x: mouseX, y: mouseY });
+    setOriginalCropRect({ ...cropRect });
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -315,38 +323,43 @@ export function ImageCropModal({
       return;
     }
 
-    // Use requestAnimationFrame for smooth updates
+    if (!originalCropRect) return;
+
+    // Cancel previous animation frame
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
 
+    // Use requestAnimationFrame for smooth updates
     animationFrameRef.current = requestAnimationFrame(() => {
-      const dx = (e.clientX - dragStart.x) / canvasScale;
-      const dy = (e.clientY - dragStart.y) / canvasScale;
+      // Calculate delta from original position (like WallPreview)
+      const dx = (mouseX - dragStart.x) / canvasScale;
+      const dy = (mouseY - dragStart.y) / canvasScale;
 
       if (dragMode === 'image') {
         setOffsetX(offsetX + dx * canvasScale);
         setOffsetY(offsetY + dy * canvasScale);
       } else if (dragMode === 'crop-move') {
-        setCropRect(prev => ({
-          ...prev,
-          x: Math.max(0, Math.min(resolution.width - prev.width, prev.x + dx)),
-          y: Math.max(0, Math.min(resolution.height - prev.height, prev.y + dy)),
-        }));
+        const newX = Math.max(0, Math.min(resolution.width - originalCropRect.width, originalCropRect.x + dx));
+        const newY = Math.max(0, Math.min(resolution.height - originalCropRect.height, originalCropRect.y + dy));
+        setCropRect({
+          ...originalCropRect,
+          x: Math.round(newX),
+          y: Math.round(newY),
+        });
       } else if (dragMode?.startsWith('crop-')) {
-        setCropRect(prev => {
-          let newWidth = prev.width;
-          let newHeight = prev.height;
-          let newX = prev.x;
-          let newY = prev.y;
+        let newWidth = originalCropRect.width;
+        let newHeight = originalCropRect.height;
+        let newX = originalCropRect.x;
+        let newY = originalCropRect.y;
 
-          // Calculate based on which handle is being dragged
-          // Always maintain aspect ratio
-          // @ts-ignore
-          if (dragMode === 'crop-br' || dragMode === 'crop-se') {
-            // Bottom-right corner: resize from top-left anchor
-            newWidth = Math.max(50, Math.min(resolution.width - prev.x, prev.width + dx));
-            newHeight = newWidth / aspectRatio;
+        // Calculate based on which handle is being dragged
+        // Always maintain aspect ratio
+        // @ts-ignore
+        if (dragMode === 'crop-br' || dragMode === 'crop-se') {
+          // Bottom-right corner: resize from top-left anchor
+          newWidth = Math.max(50, Math.min(resolution.width - originalCropRect.x, originalCropRect.width + dx));
+          newHeight = newWidth / aspectRatio;
             // Constrain to bounds
             if (newY + newHeight > resolution.height) {
               newHeight = resolution.height - newY;
@@ -355,9 +368,9 @@ export function ImageCropModal({
           // @ts-ignore
           } else if (dragMode === 'crop-tl' || dragMode === 'crop-nw') {
             // Top-left corner: resize from bottom-right anchor
-            const anchorX = prev.x + prev.width;
-            const anchorY = prev.y + prev.height;
-            newWidth = Math.max(50, prev.width - dx);
+            const anchorX = originalCropRect.x + originalCropRect.width;
+            const anchorY = originalCropRect.y + originalCropRect.height;
+            newWidth = Math.max(50, originalCropRect.width - dx);
             newHeight = newWidth / aspectRatio;
             newX = anchorX - newWidth;
             newY = anchorY - newHeight;
@@ -377,8 +390,8 @@ export function ImageCropModal({
           // @ts-ignore
           } else if (dragMode === 'crop-tr' || dragMode === 'crop-ne') {
             // Top-right corner
-            const anchorY = prev.y + prev.height;
-            newWidth = Math.max(50, Math.min(resolution.width - prev.x, prev.width + dx));
+            const anchorY = originalCropRect.y + originalCropRect.height;
+            newWidth = Math.max(50, Math.min(resolution.width - originalCropRect.x, originalCropRect.width + dx));
             newHeight = newWidth / aspectRatio;
             newY = anchorY - newHeight;
             if (newY < 0) {
@@ -394,8 +407,8 @@ export function ImageCropModal({
           // @ts-ignore
           } else if (dragMode === 'crop-bl' || dragMode === 'crop-sw') {
             // Bottom-left corner
-            const anchorX = prev.x + prev.width;
-            newWidth = Math.max(50, prev.width - dx);
+            const anchorX = originalCropRect.x + originalCropRect.width;
+            newWidth = Math.max(50, originalCropRect.width - dx);
             newHeight = newWidth / aspectRatio;
             newX = anchorX - newWidth;
             if (newX < 0) {
@@ -410,10 +423,10 @@ export function ImageCropModal({
             }
           } else if (dragMode === 'crop-r') {
             // Right edge
-            newWidth = Math.max(50, Math.min(resolution.width - prev.x, prev.width + dx));
+            newWidth = Math.max(50, Math.min(resolution.width - originalCropRect.x, originalCropRect.width + dx));
             newHeight = newWidth / aspectRatio;
             // Center vertically
-            newY = prev.y + (prev.height - newHeight) / 2;
+            newY = originalCropRect.y + (originalCropRect.height - newHeight) / 2;
             if (newY < 0) {
               newY = 0;
               newHeight = Math.min(resolution.height, newHeight);
@@ -425,16 +438,16 @@ export function ImageCropModal({
             }
           } else if (dragMode === 'crop-l') {
             // Left edge
-            const anchorX = prev.x + prev.width;
-            newWidth = Math.max(50, prev.width - dx);
+            const anchorX = originalCropRect.x + originalCropRect.width;
+            newWidth = Math.max(50, originalCropRect.width - dx);
             newHeight = newWidth / aspectRatio;
             newX = anchorX - newWidth;
-            newY = prev.y + (prev.height - newHeight) / 2;
+            newY = originalCropRect.y + (originalCropRect.height - newHeight) / 2;
             if (newX < 0) {
               newX = 0;
               newWidth = anchorX;
               newHeight = newWidth / aspectRatio;
-              newY = prev.y + (prev.height - newHeight) / 2;
+              newY = originalCropRect.y + (originalCropRect.height - newHeight) / 2;
             }
             if (newY < 0) {
               newY = 0;
@@ -449,16 +462,16 @@ export function ImageCropModal({
             }
           } else if (dragMode === 'crop-t') {
             // Top edge
-            const anchorY = prev.y + prev.height;
-            newHeight = Math.max(50, prev.height - dy);
+            const anchorY = originalCropRect.y + originalCropRect.height;
+            newHeight = Math.max(50, originalCropRect.height - dy);
             newWidth = newHeight * aspectRatio;
             newY = anchorY - newHeight;
-            newX = prev.x + (prev.width - newWidth) / 2;
+            newX = originalCropRect.x + (originalCropRect.width - newWidth) / 2;
             if (newY < 0) {
               newY = 0;
               newHeight = anchorY;
               newWidth = newHeight * aspectRatio;
-              newX = prev.x + (prev.width - newWidth) / 2;
+              newX = originalCropRect.x + (originalCropRect.width - newWidth) / 2;
             }
             if (newX < 0) {
               newX = 0;
@@ -473,9 +486,9 @@ export function ImageCropModal({
             }
           } else if (dragMode === 'crop-b') {
             // Bottom edge
-            newHeight = Math.max(50, Math.min(resolution.height - prev.y, prev.height + dy));
+            newHeight = Math.max(50, Math.min(resolution.height - originalCropRect.y, originalCropRect.height + dy));
             newWidth = newHeight * aspectRatio;
-            newX = prev.x + (prev.width - newWidth) / 2;
+            newX = originalCropRect.x + (originalCropRect.width - newWidth) / 2;
             if (newX < 0) {
               newX = 0;
               newWidth = Math.min(resolution.width, newWidth);
@@ -488,81 +501,41 @@ export function ImageCropModal({
             if (newY + newHeight > resolution.height) {
               newHeight = resolution.height - newY;
               newWidth = newHeight * aspectRatio;
-              newX = prev.x + (prev.width - newWidth) / 2;
+              newX = originalCropRect.x + (originalCropRect.width - newWidth) / 2;
             }
           }
 
-          return {
-            x: Math.round(newX),
-            y: Math.round(newY),
-            width: Math.round(newWidth),
-            height: Math.round(newHeight),
-          };
+        setCropRect({
+          x: Math.round(newX),
+          y: Math.round(newY),
+          width: Math.round(newWidth),
+          height: Math.round(newHeight),
         });
       }
-
-      setDragStart({ x: e.clientX, y: e.clientY });
+      animationFrameRef.current = null;
     });
-  };
+  }, [dragMode, originalCropRect, dragStart, resolution, aspectRatio]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback((e?: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
     setDragMode(null);
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-  };
+  }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
+  // Add document-level event listeners when dragging
+  useEffect(() => {
+    if (!dragMode) return;
 
-    if (imageSize.width === 0 || imageSize.height === 0) return;
+    document.addEventListener('mousemove', handleMouseMove as any);
+    document.addEventListener('mouseup', handleMouseUp as any);
 
-    const delta = -e.deltaY;
-    const zoomFactor = delta > 0 ? 1.1 : 0.9;
-    let newScale = scale * zoomFactor;
-    newScale = Math.max(0.1, Math.min(5, newScale));
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const canvasScale = canvas.width / resolution.width;
-
-    const imgAspect = imageSize.width / imageSize.height;
-    const resAspect = resolution.width / resolution.height;
-
-    let imgWidth, imgHeight;
-    if (imgAspect > resAspect) {
-      imgWidth = resolution.width;
-      imgHeight = resolution.width / imgAspect;
-    } else {
-      imgHeight = resolution.height;
-      imgWidth = resolution.height * imgAspect;
-    }
-
-    const scaledWidth = imgWidth * scale;
-    const scaledHeight = imgHeight * scale;
-    const currentX = (resolution.width - scaledWidth) / 2 + offsetX;
-    const currentY = (resolution.height - scaledHeight) / 2 + offsetY;
-
-    const imageX = (mouseX / canvasScale - currentX) / scale;
-    const imageY = (mouseY / canvasScale - currentY) / scale;
-
-    const newScaledWidth = imgWidth * newScale;
-    const newScaledHeight = imgHeight * newScale;
-    const newX = (resolution.width - newScaledWidth) / 2;
-    const newY = (resolution.height - newScaledHeight) / 2;
-
-    const newOffsetX = mouseX / canvasScale - newX - imageX * newScale;
-    const newOffsetY = mouseY / canvasScale - newY - imageY * newScale;
-
-    setScale(newScale);
-    setOffsetX(newOffsetX);
-    setOffsetY(newOffsetY);
-  }, [imageSize, scale, offsetX, offsetY, resolution]);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove as any);
+      document.removeEventListener('mouseup', handleMouseUp as any);
+    };
+  }, [dragMode, handleMouseMove, handleMouseUp]);
 
   const handleSave = () => {
     onSave({
@@ -597,76 +570,68 @@ export function ImageCropModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="画像の調整" size="full">
-      <div ref={containerRef} className="flex flex-col h-full">
+      <div className="flex flex-col h-full max-h-[85vh]">
         {/* Canvas */}
-        <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg mb-4 relative">
+        <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg mb-3 relative min-h-0 overflow-hidden">
           <canvas
             ref={canvasRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-            className={currentCursor}
+            className={`${currentCursor} max-w-full max-h-full`}
           />
         </div>
 
-        {/* Controls */}
-        <div className="space-y-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">エフェクト</h4>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    明度: {brightness}%
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="200"
-                    step="1"
-                    value={brightness}
-                    onChange={(e) => setBrightness(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    ぼかし: {blur}px
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    value={blur}
-                    onChange={(e) => setBlur(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-              </div>
+        {/* Controls - Compact Layout */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 mb-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                明度: {brightness}%
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="200"
+                step="1"
+                value={brightness}
+                onChange={(e) => setBrightness(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                ぼかし: {blur}px
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="20"
+                step="0.5"
+                value={blur}
+                onChange={(e) => setBlur(Number(e.target.value))}
+                className="w-full"
+              />
             </div>
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
-          <Button variant="secondary" onClick={handleReset}>
-            リセット
-          </Button>
+        <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            💡 青い枠をドラッグして表示範囲を調整
+          </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="secondary" size="sm" onClick={handleReset}>
+              リセット
+            </Button>
+            <Button variant="outline" size="sm" onClick={onClose}>
               キャンセル
             </Button>
-            <Button onClick={handleSave}>
+            <Button size="sm" onClick={handleSave}>
               適用
             </Button>
           </div>
-        </div>
-
-        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-          <p>💡 ヒント: 画像をドラッグして移動、青い枠をドラッグしてトリミング、マウスホイールでズーム</p>
         </div>
       </div>
     </Modal>

@@ -1,5 +1,5 @@
 {
-  "name": "@mcsr-tools/key-settings-editor",
+  "name": "@mcsr-tools/mcsr-config-tool",
   "version": "0.1.0",
   "private": true,
   "type": "module",

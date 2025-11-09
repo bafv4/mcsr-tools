@@ -8,9 +8,10 @@ interface AreaEditorProps {
   color: string;
   showToggle?: boolean;
   allowGridToggle?: boolean; // Whether to allow toggling grid layout
+  onShowTips?: () => void; // Callback to show tips modal
 }
 
-export const AreaEditor = memo(function AreaEditor({ area, title, color, showToggle, allowGridToggle = false }: AreaEditorProps) {
+export const AreaEditor = memo(function AreaEditor({ area, title, color, showToggle, allowGridToggle = false, onShowTips }: AreaEditorProps) {
   const { layout, resolution, updateArea } = useWallStore();
   const areaData = layout[area];
 
@@ -147,9 +148,33 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
   return (
     <div className="border rounded-lg p-4" style={{ borderColor: color }}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold" style={{ color }}>
-          {title}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold" style={{ color }}>
+            {title}
+          </h3>
+          {onShowTips && areaData.useGrid && (
+            <button
+              onClick={onShowTips}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+              title="インスタンスサイズを確認"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 text-gray-600 dark:text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
         {showToggle && 'show' in areaData && (
           <Switch
             checked={areaData.show}

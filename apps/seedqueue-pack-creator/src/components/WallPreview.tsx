@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useWallStore } from '../store/useWallStore';
 
-type DragMode = 'move' | 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se' | null;
+type DragMode = 'move' | 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se' | 'resize-n' | 'resize-s' | 'resize-w' | 'resize-e' | null;
 
 export function WallPreview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,6 +15,7 @@ export function WallPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const [imageLoadTrigger, setImageLoadTrigger] = useState(0);
 
   // Padding around the canvas (in canvas pixels)
   const CANVAS_PADDING = 20;
@@ -130,7 +131,7 @@ export function WallPreview() {
     // Draw at the edge of canvas
     ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
     ctx.restore();
-  }, [resolution, layout, background, selectedArea, dragMode]);
+  }, [resolution, layout, background, selectedArea, dragMode, imageLoadTrigger]);
 
   const drawBackground = (ctx: CanvasRenderingContext2D) => {
     if (background.type === 'color') {
@@ -142,20 +143,19 @@ export function WallPreview() {
         const img = new Image();
         img.onload = () => {
           backgroundImageRef.current = img;
-          // Redraw with the loaded image
-          const canvas = canvasRef.current;
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              drawBackgroundWithImage(ctx, img);
-              drawArea(ctx, layout.main, '#2563eb', 'Main', selectedArea === 'main');
-              if (layout.locked.show) drawArea(ctx, layout.locked, '#ea580c', 'Locked', selectedArea === 'locked');
-              if (layout.preparing.show) drawArea(ctx, layout.preparing, '#16a34a', 'Preparing', selectedArea === 'preparing');
-            }
-          }
+          // Trigger re-render by updating state
+          setImageLoadTrigger(prev => prev + 1);
+        };
+        img.onerror = () => {
+          console.error('Failed to load background image');
+          backgroundImageRef.current = null;
         };
         img.src = background.image;
-      } else {
+
+        // Draw placeholder while loading
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, resolution.width, resolution.height);
+      } else if (backgroundImageRef.current) {
         // Use cached image
         drawBackgroundWithImage(ctx, backgroundImageRef.current);
       }
@@ -591,11 +591,14 @@ export function WallPreview() {
 
     // Draw resize handles if selected
     if (isSelected) {
-      const handleSize = 12 * uiScale;
+      const handleSize = 16 * uiScale;
+      const edgeHandleWidth = 6 * uiScale;
+      const edgeHandleLength = 40 * uiScale;
       ctx.fillStyle = color;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2 * uiScale;
 
+      // Corner handles
       // Top-left
       ctx.fillRect(area.x - handleSize / 2, area.y - handleSize / 2, handleSize, handleSize);
       ctx.strokeRect(area.x - handleSize / 2, area.y - handleSize / 2, handleSize, handleSize);
@@ -611,6 +614,23 @@ export function WallPreview() {
       // Bottom-right
       ctx.fillRect(area.x + area.width - handleSize / 2, area.y + area.height - handleSize / 2, handleSize, handleSize);
       ctx.strokeRect(area.x + area.width - handleSize / 2, area.y + area.height - handleSize / 2, handleSize, handleSize);
+
+      // Edge handles (rectangles in the middle of each edge)
+      // Top edge
+      ctx.fillRect(area.x + area.width / 2 - edgeHandleLength / 2, area.y - edgeHandleWidth / 2, edgeHandleLength, edgeHandleWidth);
+      ctx.strokeRect(area.x + area.width / 2 - edgeHandleLength / 2, area.y - edgeHandleWidth / 2, edgeHandleLength, edgeHandleWidth);
+
+      // Bottom edge
+      ctx.fillRect(area.x + area.width / 2 - edgeHandleLength / 2, area.y + area.height - edgeHandleWidth / 2, edgeHandleLength, edgeHandleWidth);
+      ctx.strokeRect(area.x + area.width / 2 - edgeHandleLength / 2, area.y + area.height - edgeHandleWidth / 2, edgeHandleLength, edgeHandleWidth);
+
+      // Left edge
+      ctx.fillRect(area.x - edgeHandleWidth / 2, area.y + area.height / 2 - edgeHandleLength / 2, edgeHandleWidth, edgeHandleLength);
+      ctx.strokeRect(area.x - edgeHandleWidth / 2, area.y + area.height / 2 - edgeHandleLength / 2, edgeHandleWidth, edgeHandleLength);
+
+      // Right edge
+      ctx.fillRect(area.x + area.width - edgeHandleWidth / 2, area.y + area.height / 2 - edgeHandleLength / 2, edgeHandleWidth, edgeHandleLength);
+      ctx.strokeRect(area.x + area.width - edgeHandleWidth / 2, area.y + area.height / 2 - edgeHandleLength / 2, edgeHandleWidth, edgeHandleLength);
     }
   };
 
@@ -647,11 +667,13 @@ export function WallPreview() {
     x: number,
     y: number,
     area: any
-  ): 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se' | null => {
+  ): 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se' | 'resize-n' | 'resize-s' | 'resize-w' | 'resize-e' | null => {
     const uiScale = getUIScale();
-    const handleSize = 30 * uiScale; // Scale handle hit area (increased for easier grabbing)
+    const handleSize = 40 * uiScale; // Scale handle hit area (increased for easier grabbing)
+    const edgeHandleHitWidth = 30 * uiScale; // Hit area for edge handles (slightly wider than visual)
+    const edgeHandleHitLength = 60 * uiScale; // Hit length for edge handles (longer than visual)
 
-    // Check corners (top-left, top-right, bottom-left, bottom-right)
+    // Check corners first (top-left, top-right, bottom-left, bottom-right)
     if (Math.abs(x - area.x) < handleSize && Math.abs(y - area.y) < handleSize) {
       return 'resize-nw';
     }
@@ -666,6 +688,43 @@ export function WallPreview() {
       Math.abs(y - (area.y + area.height)) < handleSize
     ) {
       return 'resize-se';
+    }
+
+    // Check edge handles (top, bottom, left, right)
+    // Top edge
+    if (
+      Math.abs(y - area.y) < edgeHandleHitWidth &&
+      x >= area.x + area.width / 2 - edgeHandleHitLength / 2 &&
+      x <= area.x + area.width / 2 + edgeHandleHitLength / 2
+    ) {
+      return 'resize-n';
+    }
+
+    // Bottom edge
+    if (
+      Math.abs(y - (area.y + area.height)) < edgeHandleHitWidth &&
+      x >= area.x + area.width / 2 - edgeHandleHitLength / 2 &&
+      x <= area.x + area.width / 2 + edgeHandleHitLength / 2
+    ) {
+      return 'resize-s';
+    }
+
+    // Left edge
+    if (
+      Math.abs(x - area.x) < edgeHandleHitWidth &&
+      y >= area.y + area.height / 2 - edgeHandleHitLength / 2 &&
+      y <= area.y + area.height / 2 + edgeHandleHitLength / 2
+    ) {
+      return 'resize-w';
+    }
+
+    // Right edge
+    if (
+      Math.abs(x - (area.x + area.width)) < edgeHandleHitWidth &&
+      y >= area.y + area.height / 2 - edgeHandleHitLength / 2 &&
+      y <= area.y + area.height / 2 + edgeHandleHitLength / 2
+    ) {
+      return 'resize-e';
     }
 
     return null;
@@ -834,7 +893,132 @@ export function WallPreview() {
     return { x: snappedX, y: snappedY, width: snappedWidth, height: snappedHeight };
   };
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  const processDrag = useCallback((x: number, y: number) => {
+    if (!dragMode || !selectedArea || !originalArea) return;
+
+    const dx = x - dragStart.x;
+    const dy = y - dragStart.y;
+
+    // Cancel previous animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    // Use requestAnimationFrame for smooth updates
+    animationFrameRef.current = requestAnimationFrame(() => {
+      if (dragMode === 'move') {
+        let newX = Math.floor(originalArea.x + dx);
+        let newY = Math.floor(originalArea.y + dy);
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, newX, newY, originalArea.width, originalArea.height);
+
+        updateArea(selectedArea, {
+          x: snapped.x,
+          y: snapped.y,
+        });
+      } else if (dragMode === 'resize-se') {
+        let newWidth = Math.max(1, Math.floor(originalArea.width + dx));
+        let newHeight = Math.max(1, Math.floor(originalArea.height + dy));
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, originalArea.y, newWidth, newHeight, true);
+
+        updateArea(selectedArea, {
+          width: snapped.width,
+          height: snapped.height,
+        });
+      } else if (dragMode === 'resize-nw') {
+        const newWidth = Math.max(1, Math.floor(originalArea.width - dx));
+        const newHeight = Math.max(1, Math.floor(originalArea.height - dy));
+        let newX = Math.floor(originalArea.x + originalArea.width - newWidth);
+        let newY = Math.floor(originalArea.y + originalArea.height - newHeight);
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, newX, newY, newWidth, newHeight, true);
+
+        updateArea(selectedArea, {
+          x: snapped.x,
+          y: snapped.y,
+          width: originalArea.x + originalArea.width - snapped.x,
+          height: originalArea.y + originalArea.height - snapped.y,
+        });
+      } else if (dragMode === 'resize-ne') {
+        let newWidth = Math.max(1, Math.floor(originalArea.width + dx));
+        const newHeight = Math.max(1, Math.floor(originalArea.height - dy));
+        let newY = Math.floor(originalArea.y + originalArea.height - newHeight);
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, newY, newWidth, newHeight, true);
+
+        updateArea(selectedArea, {
+          y: snapped.y,
+          width: snapped.width,
+          height: originalArea.y + originalArea.height - snapped.y,
+        });
+      } else if (dragMode === 'resize-sw') {
+        const newWidth = Math.max(1, Math.floor(originalArea.width - dx));
+        let newHeight = Math.max(1, Math.floor(originalArea.height + dy));
+        let newX = Math.floor(originalArea.x + originalArea.width - newWidth);
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, newX, originalArea.y, newWidth, newHeight, true);
+
+        updateArea(selectedArea, {
+          x: snapped.x,
+          width: originalArea.x + originalArea.width - snapped.x,
+          height: snapped.height,
+        });
+      } else if (dragMode === 'resize-n') {
+        // Resize from top edge (height changes, y changes, width stays same)
+        const newHeight = Math.max(1, Math.floor(originalArea.height - dy));
+        let newY = Math.floor(originalArea.y + originalArea.height - newHeight);
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, newY, originalArea.width, newHeight, true);
+
+        updateArea(selectedArea, {
+          y: snapped.y,
+          height: originalArea.y + originalArea.height - snapped.y,
+        });
+      } else if (dragMode === 'resize-s') {
+        // Resize from bottom edge (height changes, y stays same, width stays same)
+        let newHeight = Math.max(1, Math.floor(originalArea.height + dy));
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, originalArea.y, originalArea.width, newHeight, true);
+
+        updateArea(selectedArea, {
+          height: snapped.height,
+        });
+      } else if (dragMode === 'resize-w') {
+        // Resize from left edge (width changes, x changes, height stays same)
+        const newWidth = Math.max(1, Math.floor(originalArea.width - dx));
+        let newX = Math.floor(originalArea.x + originalArea.width - newWidth);
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, newX, originalArea.y, newWidth, originalArea.height, true);
+
+        updateArea(selectedArea, {
+          x: snapped.x,
+          width: originalArea.x + originalArea.width - snapped.x,
+        });
+      } else if (dragMode === 'resize-e') {
+        // Resize from right edge (width changes, x stays same, height stays same)
+        let newWidth = Math.max(1, Math.floor(originalArea.width + dx));
+
+        // Apply snap to edges, areas, and center
+        const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, originalArea.y, newWidth, originalArea.height, true);
+
+        updateArea(selectedArea, {
+          width: snapped.width,
+        });
+      }
+      animationFrameRef.current = null;
+    });
+  }, [dragMode, selectedArea, originalArea, dragStart, snapToEdgesAndAreas, updateArea]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -850,84 +1034,13 @@ export function WallPreview() {
         setCursor('nwse-resize');
       } else if (dragMode === 'resize-ne' || dragMode === 'resize-sw') {
         setCursor('nesw-resize');
+      } else if (dragMode === 'resize-n' || dragMode === 'resize-s') {
+        setCursor('ns-resize');
+      } else if (dragMode === 'resize-w' || dragMode === 'resize-e') {
+        setCursor('ew-resize');
       }
 
-      const dx = x - dragStart.x;
-      const dy = y - dragStart.y;
-
-      // Cancel previous animation frame
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-
-      // Use requestAnimationFrame for smooth updates
-      animationFrameRef.current = requestAnimationFrame(() => {
-        if (dragMode === 'move') {
-          let newX = Math.round(originalArea.x + dx);
-          let newY = Math.round(originalArea.y + dy);
-
-          // Apply snap to edges, areas, and center
-          const snapped = snapToEdgesAndAreas(selectedArea, newX, newY, originalArea.width, originalArea.height);
-
-          updateArea(selectedArea, {
-            x: snapped.x,
-            y: snapped.y,
-          });
-        } else if (dragMode === 'resize-se') {
-          let newWidth = Math.max(50, Math.round(originalArea.width + dx));
-          let newHeight = Math.max(50, Math.round(originalArea.height + dy));
-
-          // Apply snap to edges, areas, and center
-          const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, originalArea.y, newWidth, newHeight, true);
-
-          updateArea(selectedArea, {
-            width: snapped.width,
-            height: snapped.height,
-          });
-        } else if (dragMode === 'resize-nw') {
-          const newWidth = Math.max(50, Math.round(originalArea.width - dx));
-          const newHeight = Math.max(50, Math.round(originalArea.height - dy));
-          let newX = Math.round(originalArea.x + originalArea.width - newWidth);
-          let newY = Math.round(originalArea.y + originalArea.height - newHeight);
-
-          // Apply snap to edges, areas, and center
-          const snapped = snapToEdgesAndAreas(selectedArea, newX, newY, newWidth, newHeight, true);
-
-          updateArea(selectedArea, {
-            x: snapped.x,
-            y: snapped.y,
-            width: originalArea.x + originalArea.width - snapped.x,
-            height: originalArea.y + originalArea.height - snapped.y,
-          });
-        } else if (dragMode === 'resize-ne') {
-          let newWidth = Math.max(50, Math.round(originalArea.width + dx));
-          const newHeight = Math.max(50, Math.round(originalArea.height - dy));
-          let newY = Math.round(originalArea.y + originalArea.height - newHeight);
-
-          // Apply snap to edges, areas, and center
-          const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, newY, newWidth, newHeight, true);
-
-          updateArea(selectedArea, {
-            y: snapped.y,
-            width: snapped.width,
-            height: originalArea.y + originalArea.height - snapped.y,
-          });
-        } else if (dragMode === 'resize-sw') {
-          const newWidth = Math.max(50, Math.round(originalArea.width - dx));
-          let newHeight = Math.max(50, Math.round(originalArea.height + dy));
-          let newX = Math.round(originalArea.x + originalArea.width - newWidth);
-
-          // Apply snap to edges, areas, and center
-          const snapped = snapToEdgesAndAreas(selectedArea, newX, originalArea.y, newWidth, newHeight, true);
-
-          updateArea(selectedArea, {
-            x: snapped.x,
-            width: originalArea.x + originalArea.width - snapped.x,
-            height: snapped.height,
-          });
-        }
-        animationFrameRef.current = null;
-      });
+      processDrag(x, y);
     } else {
       // Not dragging, update cursor based on hover position
       const areaName = getAreaAtPoint(x, y);
@@ -939,6 +1052,10 @@ export function WallPreview() {
           setCursor('nwse-resize');
         } else if (resizeHandle === 'resize-ne' || resizeHandle === 'resize-sw') {
           setCursor('nesw-resize');
+        } else if (resizeHandle === 'resize-n' || resizeHandle === 'resize-s') {
+          setCursor('ns-resize');
+        } else if (resizeHandle === 'resize-w' || resizeHandle === 'resize-e') {
+          setCursor('ew-resize');
         } else {
           setCursor('move');
         }
@@ -946,7 +1063,7 @@ export function WallPreview() {
         setCursor('default');
       }
     }
-  }, [dragMode, selectedArea, originalArea, dragStart, scale, layout]);
+  }, [dragMode, selectedArea, originalArea, scale, layout, processDrag]);
 
   const handleMouseUp = useCallback(() => {
     setDragMode(null);
@@ -959,107 +1076,21 @@ export function WallPreview() {
   }, []);
 
   useEffect(() => {
-    // Add global mouse up listener to handle drag release outside canvas
-    if (dragMode) {
-      const handleGlobalMouseUp = () => {
-        setDragMode(null);
-        setDragStart({ x: 0, y: 0 });
-        setOriginalArea(null);
-      };
+    // Add global mouse listeners to handle drag outside canvas
+    if (!dragMode) return;
 
-      const handleGlobalMouseMove = (e: MouseEvent) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
+    const handleGlobalMouseUp = () => {
+      handleMouseUp();
+    };
 
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / scale - CANVAS_PADDING;
-        const y = (e.clientY - rect.top) / scale - CANVAS_PADDING;
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('mousemove', handleMouseMove as any);
 
-        // Trigger the same logic as handleMouseMove
-        if (dragMode && selectedArea && originalArea) {
-          const dx = x - dragStart.x;
-          const dy = y - dragStart.y;
-
-          // Cancel previous animation frame
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-          }
-
-          // Use requestAnimationFrame for smooth updates
-          animationFrameRef.current = requestAnimationFrame(() => {
-            if (dragMode === 'move') {
-              let newX = Math.round(originalArea.x + dx);
-              let newY = Math.round(originalArea.y + dy);
-
-              const snapped = snapToEdgesAndAreas(selectedArea, newX, newY, originalArea.width, originalArea.height);
-
-              updateArea(selectedArea, {
-                x: snapped.x,
-                y: snapped.y,
-              });
-            } else if (dragMode === 'resize-se') {
-              let newWidth = Math.max(50, Math.round(originalArea.width + dx));
-              let newHeight = Math.max(50, Math.round(originalArea.height + dy));
-
-              const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, originalArea.y, newWidth, newHeight, true);
-
-              updateArea(selectedArea, {
-                width: snapped.width,
-                height: snapped.height,
-              });
-            } else if (dragMode === 'resize-nw') {
-              const newWidth = Math.max(50, Math.round(originalArea.width - dx));
-              const newHeight = Math.max(50, Math.round(originalArea.height - dy));
-              let newX = Math.round(originalArea.x + originalArea.width - newWidth);
-              let newY = Math.round(originalArea.y + originalArea.height - newHeight);
-
-              const snapped = snapToEdgesAndAreas(selectedArea, newX, newY, newWidth, newHeight, true);
-
-              updateArea(selectedArea, {
-                x: snapped.x,
-                y: snapped.y,
-                width: originalArea.x + originalArea.width - snapped.x,
-                height: originalArea.y + originalArea.height - snapped.y,
-              });
-            } else if (dragMode === 'resize-ne') {
-              let newWidth = Math.max(50, Math.round(originalArea.width + dx));
-              const newHeight = Math.max(50, Math.round(originalArea.height - dy));
-              let newY = Math.round(originalArea.y + originalArea.height - newHeight);
-
-              const snapped = snapToEdgesAndAreas(selectedArea, originalArea.x, newY, newWidth, newHeight, true);
-
-              updateArea(selectedArea, {
-                y: snapped.y,
-                width: snapped.width,
-                height: originalArea.y + originalArea.height - snapped.y,
-              });
-            } else if (dragMode === 'resize-sw') {
-              const newWidth = Math.max(50, Math.round(originalArea.width - dx));
-              let newHeight = Math.max(50, Math.round(originalArea.height + dy));
-              let newX = Math.round(originalArea.x + originalArea.width - newWidth);
-
-              const snapped = snapToEdgesAndAreas(selectedArea, newX, originalArea.y, newWidth, newHeight, true);
-
-              updateArea(selectedArea, {
-                x: snapped.x,
-                width: originalArea.x + originalArea.width - snapped.x,
-                height: snapped.height,
-              });
-            }
-            animationFrameRef.current = null;
-          });
-        }
-      };
-
-      window.addEventListener('mouseup', handleGlobalMouseUp);
-      window.addEventListener('mousemove', handleGlobalMouseMove);
-
-      return () => {
-        window.removeEventListener('mouseup', handleGlobalMouseUp);
-        window.removeEventListener('mousemove', handleGlobalMouseMove);
-      };
-    }
-  }, [dragMode, selectedArea, originalArea, dragStart, scale]);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove as any);
+    };
+  }, [dragMode, handleMouseMove, handleMouseUp]);
 
   return (
     <div ref={containerRef} className="w-full">

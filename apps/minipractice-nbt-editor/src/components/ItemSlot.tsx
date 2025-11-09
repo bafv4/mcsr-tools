@@ -1,4 +1,4 @@
-import { MinecraftItemIcon, formatItemName } from '@mcsr-tools/mcitems';
+import { MinecraftItemIcon, formatItemName, formatPotionName, formatPotionEffect } from '@mcsr-tools/mcitems';
 import { isStackable, formatEnchantmentName } from '@mcsr-tools/utils';
 import type { NBTItem } from '@mcsr-tools/types';
 import { Tooltip } from './Tooltip';
@@ -21,10 +21,34 @@ export function ItemSlot({ item, selected, onClick, onContextMenu, slotType = 'n
   // Check if item has enchantments
   const hasEnchantments = item?.tag?.Enchantments && item.tag.Enchantments.length > 0;
 
-  // Build tooltip content with enchantments
+  // Check if item is a potion
+  const isPotion = item && (
+    item.id === 'minecraft:potion' ||
+    item.id === 'minecraft:splash_potion' ||
+    item.id === 'minecraft:lingering_potion'
+  );
+
+  // Build tooltip content with enchantments and potion effects
   const getTooltipContent = () => {
     if (!item || isEmpty) return null;
 
+    // For potions, show Minecraft-style tooltip
+    if (isPotion && item.tag?.Potion) {
+      const displayName = formatPotionName(item.id, item.tag.Potion);
+      const effectWithDuration = formatPotionEffect(item.tag.Potion);
+
+      return (
+        <div className="text-left">
+          <div className="font-semibold text-white text-base">{displayName}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {effectWithDuration}
+          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{item.id}</div>
+        </div>
+      );
+    }
+
+    // For normal items
     return (
       <div className="text-left">
         <div className="font-semibold text-white text-base">{formatItemName(item.id)}</div>

@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SeedQueue Wall Maker</title>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SeedQueue Wall Maker" />
+    <meta property="og:description" content="Create custom wall layouts for SeedQueue mod" />
+    <meta property="og:image" content="/api/og" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SeedQueue Wall Maker" />
+    <meta name="twitter:description" content="Create custom wall layouts for SeedQueue mod" />
+    <meta name="twitter:image" content="/api/og" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -13,6 +25,23 @@
       if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
         document.documentElement.classList.add('dark');
       }
+
+      // Update OG tags if layout parameter is present
+      (function() {
+        const params = new URLSearchParams(window.location.search);
+        const layoutParam = params.get('layout');
+
+        if (layoutParam) {
+          const ogImageUrl = `/api/og?layout=${encodeURIComponent(layoutParam)}`;
+
+          // Update OG image tags
+          const ogImage = document.querySelector('meta[property="og:image"]');
+          if (ogImage) ogImage.setAttribute('content', ogImageUrl);
+
+          const twitterImage = document.querySelector('meta[name="twitter:image"]');
+          if (twitterImage) twitterImage.setAttribute('content', ogImageUrl);
+        }
+      })();
     </script>
   </head>
   <body>
