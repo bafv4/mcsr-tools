@@ -15,11 +15,18 @@ import { exportResourcePack } from './utils/packExport';
 
 const versionInfo: VersionInfo = {
   appName: 'SeedQueue Wall Maker',
-  version: 'v2.3.0',
+  version: 'v2.3.1',
   author: 'baf',
   authorUrl: 'https://github.com/bafv4',
   repoUrl: 'https://github.com/bafv4/mcsr-tools',
   changelog: [
+    {
+      version: 'v2.3.1',
+      date: '2025-11-09',
+      changes: [
+        '共有機能を改善',
+      ],
+    },
     {
       version: 'v2.3.0',
       date: '2025-11-09',
@@ -77,20 +84,42 @@ function App() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
 
-  // Load layout from URL parameter on mount
+  // Load layout and resolution from URL parameter on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const layoutParam = params.get('layout');
+    const resolutionParam = params.get('resolution');
 
     if (layoutParam) {
       try {
         const decodedLayout = JSON.parse(atob(layoutParam));
         setLayout(decodedLayout);
+
+        // If layout is loaded but no resolution parameter, default to 1920x1080
+        if (!resolutionParam) {
+          setResolution({ width: 1920, height: 1080 });
+        }
       } catch (error) {
         console.error('Failed to load layout from URL:', error);
       }
     }
-  }, [setLayout]);
+
+    if (resolutionParam) {
+      try {
+        const [width, height] = resolutionParam.split('x').map(Number);
+        if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
+          setResolution({ width, height });
+        } else {
+          // If resolution parameter is invalid, default to 1920x1080
+          setResolution({ width: 1920, height: 1080 });
+        }
+      } catch (error) {
+        console.error('Failed to load resolution from URL:', error);
+        // If resolution parsing fails, default to 1920x1080
+        setResolution({ width: 1920, height: 1080 });
+      }
+    }
+  }, [setLayout, setResolution]);
 
   const handleDownload = async () => {
     try {
@@ -150,9 +179,10 @@ function App() {
     // Encode layout to base64
     const layoutData = btoa(JSON.stringify(layout));
 
-    // Create share URL with layout parameter
+    // Create share URL with layout and resolution parameters
     const url = new URL(window.location.href);
     url.searchParams.set('layout', layoutData);
+    url.searchParams.set('resolution', `${resolution.width}x${resolution.height}`);
     setShareUrl(url.toString());
     setShowShareModal(true);
   };
