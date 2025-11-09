@@ -1,5 +1,4 @@
 import { ImageResponse } from '@vercel/og';
-import type { NextRequest } from 'next/server';
 
 export const config = {
   runtime: 'edge',
@@ -23,7 +22,7 @@ interface WallLayout {
   preparing: Area;
 }
 
-export default async function handler(req: NextRequest) {
+export default async function handler(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const layoutParam = searchParams.get('layout');
@@ -312,6 +311,25 @@ export default async function handler(req: NextRequest) {
     );
   } catch (error) {
     console.error('OG image generation failed:', error);
+
+    // Fallback to icon.png
+    try {
+      const iconUrl = new URL('/icon.png', req.url);
+      const iconResponse = await fetch(iconUrl);
+
+      if (iconResponse.ok) {
+        const iconBlob = await iconResponse.blob();
+        return new Response(iconBlob, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=3600',
+          },
+        });
+      }
+    } catch (fallbackError) {
+      console.error('Fallback to icon.png failed:', fallbackError);
+    }
+
     return new Response('Failed to generate image', { status: 500 });
   }
 }

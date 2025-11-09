@@ -1,8 +1,16 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/api/index"
+      "src": "/api/og",
+      "dest": "/api/og"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf))",
+      "dest": "/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/api/index"
     }
   ],
   "buildCommand": "cd ../.. && pnpm build --filter=@mcsr-tools/seedqueue-pack-creator",
