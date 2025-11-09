@@ -4,7 +4,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const host = req.headers.host || '';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const currentUrl = `${protocol}://${host}${req.url}`;
-  const iconUrl = `${protocol}://${host}/public/icon.png`;
+  const iconUrl = `${protocol}://${host}/icon.png`;
 
   // Extract name parameter from URL
   const shareName = req.query.name as string | undefined;
