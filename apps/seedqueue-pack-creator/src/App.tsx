@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useWallStore } from './store/useWallStore';
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Select, VersionChip } from '@mcsr-tools/ui';
 import type { VersionInfo } from '@mcsr-tools/ui';

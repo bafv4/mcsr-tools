@@ -516,7 +516,7 @@ export function ImageCropModal({
     });
   }, [dragMode, originalCropRect, dragStart, resolution, aspectRatio]);
 
-  const handleMouseUp = useCallback((e?: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
+  const handleMouseUp = useCallback((_e?: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
     setDragMode(null);
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
