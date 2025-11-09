@@ -1,8 +1,10 @@
 import { useRef } from 'react';
 import { useWallStore } from '../store/useWallStore';
 import { Input, Button } from '@mcsr-tools/ui';
+import { useI18n } from '../i18n/I18nContext';
 
 export function PackInfo() {
+  const { t } = useI18n();
   const { packInfo, setPackInfo } = useWallStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -19,10 +21,10 @@ export function PackInfo() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">リソースパック情報</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('packInfoTitle')}</h3>
 
       <Input
-        label="リソースパック名"
+        label={t('packName')}
         value={packInfo.name}
         onChange={(e) => setPackInfo({ name: e.target.value })}
         placeholder="SeedQueue Resource Pack"
@@ -30,7 +32,7 @@ export function PackInfo() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          説明
+          {t('packDescription')}
         </label>
         <textarea
           value={packInfo.description}
@@ -43,7 +45,7 @@ export function PackInfo() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          アイコン (pack.png)
+          {t('packIcon')}
         </label>
         <input
           ref={fileInputRef}
@@ -57,7 +59,7 @@ export function PackInfo() {
           onClick={() => fileInputRef.current?.click()}
           className="w-full"
         >
-          アイコンをアップロード
+          {t('uploadIcon')}
         </Button>
         {packInfo.icon && (
           <div className="mt-2">

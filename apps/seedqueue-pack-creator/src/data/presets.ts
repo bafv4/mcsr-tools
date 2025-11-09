@@ -38,7 +38,7 @@ interface PresetRatio {
 
 const presetsRatio: PresetRatio[] = [
   {
-    name: 'デフォルト',
+    name: 'Default',
     main: {
       x: 0,
       y: 0,

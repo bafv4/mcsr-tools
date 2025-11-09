@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Input } from '@mcsr-tools/ui';
+import { useI18n } from '../i18n/I18nContext';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface ShareModalProps {
 }
 
 export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [shareName, setShareName] = useState('');
   const [finalShareUrl, setFinalShareUrl] = useState(shareUrl);
@@ -32,7 +34,7 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy URL:', error);
-      alert('URLのコピーに失敗しました');
+      alert(t('copyUrlFailed'));
     }
   };
 
@@ -43,29 +45,29 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="レイアウトを共有">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('shareLayoutTitle')}>
       <div className="space-y-6">
         {/* Share Name Section */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-            共有名（任意）
+            {t('shareName')}
           </label>
           <Input
             type="text"
             value={shareName}
             onChange={(e) => setShareName(e.target.value)}
-            placeholder="例: 私のレイアウト"
+            placeholder={t('shareNamePlaceholder')}
             className="w-full"
           />
           <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-            SNSで共有する際に表示される名前です
+            {t('shareNameHelp')}
           </p>
         </div>
 
         {/* URL Copy Section */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-            共有URL
+            {t('shareUrl')}
           </label>
           <div className="flex gap-2">
             <input
@@ -95,7 +97,7 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
                   >
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  コピー済み
+                  {t('copied')}
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
@@ -113,20 +115,20 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
-                  URLをコピー
+                  {t('copyUrl')}
                 </span>
               )}
             </Button>
           </div>
           <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-            このURLにアクセスすると、現在のレイアウトが自動的に読み込まれます
+            {t('shareUrlHelp')}
           </p>
         </div>
 
         {/* SNS Share Section */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-            SNSで共有
+            {t('shareOnSNS')}
           </label>
           <div className="flex gap-2">
             <Button
@@ -143,7 +145,7 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
               >
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
-              X (Twitter)
+              {t('shareOnTwitter')}
             </Button>
           </div>
         </div>
@@ -168,9 +170,9 @@ export function ShareModal({ isOpen, onClose, shareUrl }: ShareModalProps) {
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div className="text-sm text-blue-900 dark:text-blue-100">
-              <p className="font-medium mb-1">共有されるのはレイアウトのみです</p>
+              <p className="font-medium mb-1">{t('shareLayoutOnly')}</p>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                パック名、背景画像、サウンド、ロック画像などの設定は含まれません
+                {t('shareLayoutOnlyDesc')}
               </p>
             </div>
           </div>

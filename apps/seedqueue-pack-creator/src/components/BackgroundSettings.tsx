@@ -3,8 +3,10 @@ import { HexColorPicker } from 'react-colorful';
 import { useWallStore } from '../store/useWallStore';
 import { Button, Input, Select } from '@mcsr-tools/ui';
 import { ImageCropModal } from './ImageCropModal';
+import { useI18n } from '../i18n/I18nContext';
 
 export function BackgroundSettings() {
+  const { t } = useI18n();
   const { background, setBackground, resolution } = useWallStore();
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showStartPicker, setShowStartPicker] = useState(false);
@@ -67,35 +69,44 @@ export function BackgroundSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">背景タイプ</h3>
-        <div className="flex gap-2">
-          <Button
-            variant={background.type === 'color' ? 'primary' : 'outline'}
-            onClick={() => setBackground({ type: 'color' })}
-          >
-            単色
-          </Button>
-          <Button
-            variant={background.type === 'image' ? 'primary' : 'outline'}
-            onClick={() => setBackground({ type: 'image' })}
-          >
-            画像
-          </Button>
-          <Button
-            variant={background.type === 'gradient' ? 'primary' : 'outline'}
-            onClick={() => setBackground({ type: 'gradient' })}
-          >
-            グラデーション
-          </Button>
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('backgroundTitle')}</h3>
+        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <h4 className="text-md font-semibold mb-4 text-gray-900 dark:text-white">{t('backgroundType')}</h4>
+          <div className="flex gap-2 items-center">
+            <Button
+              variant={background.type === 'color' ? 'primary' : 'outline'}
+              onClick={() => setBackground({ type: 'color' })}
+              className="flex-1"
+              size="sm"
+            >
+              {t('colorType')}
+            </Button>
+            <Button
+              variant={background.type === 'image' ? 'primary' : 'outline'}
+              onClick={() => setBackground({ type: 'image' })}
+              className="flex-1"
+              size="sm"
+            >
+              {t('imageType')}
+            </Button>
+            <Button
+              variant={background.type === 'gradient' ? 'primary' : 'outline'}
+              onClick={() => setBackground({ type: 'gradient' })}
+              className="flex-1"
+              size="sm"
+            >
+              {t('gradientType')}
+            </Button>
+          </div>
         </div>
       </div>
 
       {background.type === 'color' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">単色設定</h3>
+          <h4 className="text-md font-semibold text-gray-900 dark:text-white">{t('colorSelect')}</h4>
           <div className="space-y-2">
             <Input
-              label="カラーコード"
+              label={t('colorCode')}
               value={background.color}
               onChange={(e) => setBackground({ color: e.target.value })}
               placeholder="#1a1a1a"
@@ -110,7 +121,7 @@ export function BackgroundSettings() {
                   className="w-6 h-6 rounded mr-2 border border-gray-300 dark:border-gray-600"
                   style={{ backgroundColor: background.color }}
                 />
-                カラーピッカー
+                {t('colorPicker')}
               </Button>
               {showColorPicker && (
                 <div className="absolute z-10 mt-2">
@@ -131,7 +142,7 @@ export function BackgroundSettings() {
 
       {background.type === 'image' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">画像設定</h3>
+          <h4 className="text-md font-semibold text-gray-900 dark:text-white">{t('imageSelect')}</h4>
           <div className="space-y-4">
             <div>
               <input
@@ -147,7 +158,7 @@ export function BackgroundSettings() {
                   onClick={() => fileInputRef.current?.click()}
                   className="flex-1"
                 >
-                  {background.image ? '画像を変更' : '画像をアップロード'}
+                  {background.image ? t('changeImage') : t('uploadImage')}
                 </Button>
                 {background.image && (
                   <>
@@ -155,13 +166,13 @@ export function BackgroundSettings() {
                       variant="outline"
                       onClick={() => setShowCropModal(true)}
                     >
-                      調整
+                      {t('adjustImage')}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={handleRemoveImage}
                     >
-                      削除
+                      {t('removeImage')}
                     </Button>
                   </>
                 )}
@@ -182,11 +193,11 @@ export function BackgroundSettings() {
 
       {background.type === 'gradient' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">グラデーション設定</h3>
+          <h4 className="text-md font-semibold text-gray-900 dark:text-white">{t('gradientSettings')}</h4>
           <div className="space-y-4">
             <div className="space-y-2">
               <Input
-                label="開始色"
+                label={t('gradientStart')}
                 value={background.gradientStart}
                 onChange={(e) => setBackground({ gradientStart: e.target.value })}
                 placeholder="#1a1a1a"
@@ -201,7 +212,7 @@ export function BackgroundSettings() {
                     className="w-6 h-6 rounded mr-2 border border-gray-300 dark:border-gray-600"
                     style={{ backgroundColor: background.gradientStart }}
                   />
-                  カラーピッカー
+                  {t('colorPicker')}
                 </Button>
                 {showStartPicker && (
                   <div className="absolute z-10 mt-2">
@@ -219,7 +230,7 @@ export function BackgroundSettings() {
             </div>
             <div className="space-y-2">
               <Input
-                label="終了色"
+                label={t('gradientEnd')}
                 value={background.gradientEnd}
                 onChange={(e) => setBackground({ gradientEnd: e.target.value })}
                 placeholder="#4a4a4a"
@@ -234,7 +245,7 @@ export function BackgroundSettings() {
                     className="w-6 h-6 rounded mr-2 border border-gray-300 dark:border-gray-600"
                     style={{ backgroundColor: background.gradientEnd }}
                   />
-                  カラーピッカー
+                  {t('colorPicker')}
                 </Button>
                 {showEndPicker && (
                   <div className="absolute z-10 mt-2">
@@ -251,7 +262,7 @@ export function BackgroundSettings() {
               </div>
             </div>
             <Select
-              label="方向"
+              label={t('gradientDirection')}
               value={background.gradientDirection}
               onChange={(e) =>
                 setBackground({
@@ -259,10 +270,10 @@ export function BackgroundSettings() {
                 })
               }
               options={[
-                { value: 'vertical', label: '垂直' },
-                { value: 'horizontal', label: '水平' },
-                { value: 'diagonal', label: '対角線' },
-                { value: 'reverse-diagonal', label: '逆対角線' },
+                { value: 'vertical', label: t('vertical') },
+                { value: 'horizontal', label: t('horizontal') },
+                { value: 'diagonal', label: t('diagonal') },
+                { value: 'reverse-diagonal', label: t('reverseDiagonal') },
               ]}
             />
           </div>

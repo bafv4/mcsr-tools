@@ -228,58 +228,71 @@ export async function exportResourcePack(
   }
   // Enabled without custom images: don't add any lock image file (use default)
 
-  // Add sound files
-  // Built-in sounds (replace existing based on flag)
-  if (sounds.lockInstanceReplace) {
-    if (sounds.lockInstance) {
-      // Replace with custom file
-      const soundBlob = await dataURLToBlob(sounds.lockInstance);
-      soundsFolder?.file('lock_instance.ogg', soundBlob);
-    } else {
-      // Replace with silence (empty file)
-      soundsFolder?.file('lock_instance.ogg', new Blob([], { type: 'audio/ogg' }));
-    }
-  }
-  // If not replacing, don't add the file (use default)
+  // Add sound files and create sounds.json
+  // Create sounds.json based on globalMode
+  if (sounds.globalMode !== 'default') {
+    const soundsJson: any = {
+      lock_instance: { sounds: [] },
+      reset_all: { sounds: [] },
+      reset_column: { sounds: [] },
+      reset_row: { sounds: [] },
+      start_benchmark: { sounds: [] },
+      finish_benchmark: { sounds: [] },
+    };
 
-  if (sounds.resetInstanceReplace) {
-    if (sounds.resetInstance) {
-      // Replace with custom file
-      const soundBlob = await dataURLToBlob(sounds.resetInstance);
-      soundsFolder?.file('reset_instance.ogg', soundBlob);
-    } else {
-      // Replace with silence (empty file)
-      soundsFolder?.file('reset_instance.ogg', new Blob([], { type: 'audio/ogg' }));
-    }
-  }
-  // If not replacing, don't add the file (use default)
+    if (sounds.globalMode === 'off') {
+      // Off mode: all sounds are empty arrays (silent)
+      // soundsJson is already initialized with empty arrays
+    } else if (sounds.globalMode === 'custom') {
+      // Custom mode: process each sound individually
+      const processSound = async (
+        soundKey: 'lockInstance' | 'resetInstance' | 'resetAll' | 'resetColumn' | 'resetRow' | 'startBenchmark' | 'finishBenchmark',
+        jsonKey: string
+      ) => {
+        const sound = sounds[soundKey];
 
-  // Custom sounds (require sounds.json)
-  const customSounds: any = {};
-  const soundMappings = [
-    { key: 'playInstance', name: 'play_instance' },
-    { key: 'resetAll', name: 'reset_all' },
-    { key: 'resetColumn', name: 'reset_column' },
-    { key: 'resetRow', name: 'reset_row' },
-    { key: 'startBenchmark', name: 'start_benchmark' },
-    { key: 'finishBenchmark', name: 'finish_benchmark' },
-  ];
-
-  for (const { key, name } of soundMappings) {
-    const soundData = sounds[key as keyof SoundSettings];
-    if (soundData && typeof soundData === 'string') {
-      const soundBlob = await dataURLToBlob(soundData);
-      soundsFolder?.file(`${name}.ogg`, soundBlob);
-      customSounds[name] = {
-        sounds: [`seedqueue:${name}`],
+        if (sound.mode === 'off') {
+          // Off: empty array (silent)
+          soundsJson[jsonKey].sounds = [];
+        } else if (sound.mode === 'default') {
+          // Default: reference built-in SeedQueue sound
+          soundsJson[jsonKey].sounds = [`seedqueue:${jsonKey}`];
+        } else if (sound.mode === 'custom') {
+          if (sound.file) {
+            // Custom with file: add .ogg file
+            const soundBlob = await dataURLToBlob(sound.file);
+            soundsFolder?.file(`${jsonKey}.ogg`, soundBlob);
+            soundsJson[jsonKey].sounds = [`${jsonKey}.ogg`];
+          } else {
+            // Custom without file: same as off (silent)
+            soundsJson[jsonKey].sounds = [];
+          }
+        }
       };
-    }
-  }
 
-  // Create sounds.json if there are custom sounds
-  if (Object.keys(customSounds).length > 0) {
-    seedqueueFolder?.file('sounds.json', JSON.stringify(customSounds, null, 2));
+      // Process basic sounds
+      await processSound('lockInstance', 'lock_instance');
+      await processSound('startBenchmark', 'start_benchmark');
+      await processSound('finishBenchmark', 'finish_benchmark');
+
+      // Process reset sounds
+      if (sounds.resetInstanceMode === 'unified') {
+        // Unified: use resetInstance for all three
+        await processSound('resetInstance', 'reset_all');
+        await processSound('resetInstance', 'reset_column');
+        await processSound('resetInstance', 'reset_row');
+      } else {
+        // Separate: use individual settings
+        await processSound('resetAll', 'reset_all');
+        await processSound('resetColumn', 'reset_column');
+        await processSound('resetRow', 'reset_row');
+      }
+    }
+
+    // Always create sounds.json when globalMode is 'off' or 'custom'
+    seedqueueFolder?.file('sounds.json', JSON.stringify(soundsJson, null, 2));
   }
+  // If globalMode is 'default', don't create sounds.json (use SeedQueue's built-in sounds)
 
   // Generate ZIP file
   const blob = await zip.generateAsync({ type: 'blob' });

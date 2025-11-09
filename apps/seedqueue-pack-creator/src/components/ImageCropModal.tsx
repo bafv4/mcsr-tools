@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Modal, Button } from '@mcsr-tools/ui';
+import { useI18n } from '../i18n/I18nContext';
 
 interface ImageCropModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export function ImageCropModal({
   initialAdjustments,
   resolution,
 }: ImageCropModalProps) {
+  const { t } = useI18n();
   const [scale, setScale] = useState(initialAdjustments.scale);
   const [offsetX, setOffsetX] = useState(initialAdjustments.offsetX);
   const [offsetY, setOffsetY] = useState(initialAdjustments.offsetY);
@@ -569,7 +571,7 @@ export function ImageCropModal({
   const currentCursor = dragMode ? getCursor(dragMode) : getCursor(hoverMode);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="画像の調整" size="full">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('imageCropTitle')} size="full">
       <div className="flex flex-col h-full max-h-[85vh]">
         {/* Canvas */}
         <div className="flex-1 flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg mb-3 relative min-h-0 overflow-hidden">
@@ -587,7 +589,7 @@ export function ImageCropModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                明度: {brightness}%
+                {t('brightness')}: {brightness}%
               </label>
               <input
                 type="range"
@@ -601,7 +603,7 @@ export function ImageCropModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                ぼかし: {blur}px
+                {t('blurAmount')}: {blur}px
               </label>
               <input
                 type="range"
@@ -619,17 +621,17 @@ export function ImageCropModal({
         {/* Action buttons */}
         <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-600 dark:text-gray-400">
-            💡 青い枠をドラッグして表示範囲を調整
+            {t('cropHint')}
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={handleReset}>
-              リセット
+              {t('reset')}
             </Button>
             <Button variant="outline" size="sm" onClick={onClose}>
-              キャンセル
+              {t('cancel')}
             </Button>
             <Button size="sm" onClick={handleSave}>
-              適用
+              {t('apply')}
             </Button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Modal, Button, Select } from '@mcsr-tools/ui';
 import { importResourcePack } from '../utils/packImport';
+import { useI18n } from '../i18n/I18nContext';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface ImportModalProps {
 }
 
 export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
+  const { t } = useI18n();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [resolution, setResolution] = useState({ width: 1920, height: 1080 });
   const [customResolution, setCustomResolution] = useState({ width: '', height: '' });
@@ -44,7 +46,7 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
 
   const handleImport = async () => {
     if (!selectedFile) {
-      alert('ファイルを選択してください');
+      alert(t('pleaseSelectFile'));
       return;
     }
 
@@ -59,7 +61,7 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
       setCustomResolution({ width: '', height: '' });
     } catch (error) {
       console.error('Import failed:', error);
-      alert('リソースパックの読み込みに失敗しました');
+      alert(t('importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -74,12 +76,12 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleCancel} title="リソースパックをインポート">
+    <Modal isOpen={isOpen} onClose={handleCancel} title={t('importResourcePack')}>
       <div className="space-y-6">
         {/* File selection */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-            ファイルを選択
+            {t('selectFile')}
           </label>
           <input
             ref={fileInputRef}
@@ -94,7 +96,7 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
               onClick={() => fileInputRef.current?.click()}
               className="flex-1"
             >
-              {selectedFile ? selectedFile.name : 'ファイルを選択...'}
+              {selectedFile ? selectedFile.name : t('chooseFile')}
             </Button>
             {selectedFile && (
               <Button
@@ -102,19 +104,19 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
                 size="sm"
                 onClick={() => setSelectedFile(null)}
               >
-                クリア
+                {t('clear')}
               </Button>
             )}
           </div>
           <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-            .zipファイルを選択してください
+            {t('zipFilePrompt')}
           </p>
         </div>
 
         {/* Resolution selection */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-            画面サイズを指定
+            {t('specifyResolution')}
           </label>
           {!showCustomResolution ? (
             <div className="flex items-center gap-2">
@@ -128,7 +130,7 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
                   { value: '1280x720', label: 'HD (1280x720)' },
                   { value: '1366x768', label: 'WXGA (1366x768)' },
                   { value: '1600x900', label: 'HD+ (1600x900)' },
-                  { value: 'custom', label: 'カスタム...' },
+                  { value: 'custom', label: t('custom') },
                 ]}
                 className="flex-1"
               />
@@ -137,7 +139,7 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
             <div className="flex items-center gap-2">
               <input
                 type="number"
-                placeholder="幅"
+                placeholder={t('width')}
                 value={customResolution.width}
                 onChange={(e) => setCustomResolution({ ...customResolution, width: e.target.value })}
                 className="flex-1 px-3 py-2 border border-default rounded text-sm bg-white dark:bg-gray-700 text-primary"
@@ -146,14 +148,14 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
               <span className="text-secondary">×</span>
               <input
                 type="number"
-                placeholder="高さ"
+                placeholder={t('height')}
                 value={customResolution.height}
                 onChange={(e) => setCustomResolution({ ...customResolution, height: e.target.value })}
                 className="flex-1 px-3 py-2 border border-default rounded text-sm bg-white dark:bg-gray-700 text-primary"
                 min="1"
               />
               <Button size="sm" onClick={handleCustomResolutionApply}>
-                適用
+                {t('apply')}
               </Button>
               <Button
                 variant="outline"
@@ -164,13 +166,13 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
                   setResolution({ width: 1920, height: 1080 });
                 }}
               >
-                キャンセル
+                {t('cancel')}
               </Button>
             </div>
           )}
           <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-            インポートするリソースパックの画面サイズを指定してください。<br />
-            倍率形式のレイアウトは、ここで指定したサイズに変換されます。
+            {t('importResolutionNote')}<br />
+            {t('layoutNoteResolution')}
           </p>
         </div>
 
@@ -194,10 +196,10 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
             <div className="text-sm text-blue-900 dark:text-blue-100">
-              <p className="font-medium mb-1">画面サイズの選択について</p>
+              <p className="font-medium mb-1">{t('resolutionSelectionAbout')}</p>
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                リソースパックが作成された画面サイズと同じサイズを選択してください。<br />
-                不明な場合は、FHD (1920x1080) を選択することをお勧めします。
+                {t('resolutionMatchNote')}<br />
+                {t('recommendFHD')}
               </p>
             </div>
           </div>
@@ -206,10 +208,10 @@ export function ImportModal({ isOpen, onClose, onImport }: ImportModalProps) {
         {/* Action buttons */}
         <div className="flex gap-2 justify-end">
           <Button variant="outline" onClick={handleCancel} disabled={isImporting}>
-            キャンセル
+            {t('cancel')}
           </Button>
           <Button onClick={handleImport} disabled={!selectedFile || isImporting}>
-            {isImporting ? 'インポート中...' : 'インポート'}
+            {isImporting ? t('importing') : t('import')}
           </Button>
         </div>
       </div>

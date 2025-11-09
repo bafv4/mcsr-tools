@@ -1,6 +1,7 @@
 import { useCallback, memo, useState, useEffect } from 'react';
 import { useWallStore, Area } from '../store/useWallStore';
 import { Input, Button, Switch } from '@mcsr-tools/ui';
+import { useI18n } from '../i18n/I18nContext';
 
 interface AreaEditorProps {
   area: 'main' | 'locked' | 'preparing';
@@ -12,6 +13,7 @@ interface AreaEditorProps {
 }
 
 export const AreaEditor = memo(function AreaEditor({ area, title, color, showToggle, allowGridToggle = false, onShowTips }: AreaEditorProps) {
+  const { t } = useI18n();
   const { layout, resolution, updateArea } = useWallStore();
   const areaData = layout[area];
 
@@ -30,10 +32,10 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
 
   const validateGrid = useCallback((rows: number, columns: number): string | null => {
     if (rows * columns > 30) {
-      return 'タテ × ヨコは30以下にしてください';
+      return t('gridValidationError');
     }
     return null;
-  }, []);
+  }, [t]);
 
   const handleChange = useCallback((field: keyof Area, value: number) => {
     updateArea(area, { [field]: value });
@@ -156,7 +158,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
             <button
               onClick={onShowTips}
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-              title="インスタンスサイズを確認"
+              title={t('checkInstanceSize')}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -179,18 +181,18 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
           <Switch
             checked={areaData.show}
             onChange={handleToggleShow}
-            label="表示"
+            label={t('show')}
           />
         )}
       </div>
 
       {/* Group 1: Position, Size, and Alignment */}
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
-        <h4 className="text-sm font-medium text-secondary mb-3">座標・サイズ</h4>
+        <h4 className="text-sm font-medium text-secondary mb-3">{t('positionSize')}</h4>
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <Input
-              label="X座標 (px)"
+              label={t('xPosition')}
               type="number"
               value={areaData.x}
               onChange={handleXChange}
@@ -198,7 +200,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
           </div>
           <div>
             <Input
-              label="Y座標 (px)"
+              label={t('yPosition')}
               type="number"
               value={areaData.y}
               onChange={handleYChange}
@@ -206,7 +208,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
           </div>
           <div>
             <Input
-              label="幅 (px)"
+              label={t('areaWidth')}
               type="number"
               value={areaData.width}
               onChange={handleWidthChange}
@@ -214,7 +216,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
           </div>
           <div>
             <Input
-              label="高さ (px)"
+              label={t('areaHeight')}
               type="number"
               value={areaData.height}
               onChange={handleHeightChange}
@@ -223,10 +225,10 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleCenterHorizontal}>
-            左右中央
+            {t('centerHorizontal')}
           </Button>
           <Button variant="outline" size="sm" onClick={handleCenterVertical}>
-            上下中央
+            {t('centerVertical')}
           </Button>
         </div>
       </div>
@@ -234,12 +236,12 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
       {/* Group 2: Grid Settings */}
       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-secondary">グリッド設定</h4>
+          <h4 className="text-sm font-medium text-secondary">{t('gridSettings')}</h4>
           {allowGridToggle && (
             <Switch
               checked={areaData.useGrid ?? true}
               onChange={handleToggleGrid}
-              label="使用する"
+              label={t('useGrid')}
             />
           )}
         </div>
@@ -253,7 +255,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
-                  label="タテ"
+                  label={t('rows')}
                   type="number"
                   min="1"
                   value={localRows}
@@ -271,7 +273,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
               </div>
               <div>
                 <Input
-                  label="ヨコ"
+                  label={t('columns')}
                   type="number"
                   min="1"
                   value={localColumns}
@@ -290,7 +292,7 @@ export const AreaEditor = memo(function AreaEditor({ area, title, color, showTog
             </div>
             <div>
               <Input
-                label="Padding (px)"
+                label={t('padding')}
                 type="number"
                 min="0"
                 max="64"

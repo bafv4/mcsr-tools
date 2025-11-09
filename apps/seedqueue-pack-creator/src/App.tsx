@@ -12,14 +12,24 @@ import { ShareModal } from './components/ShareModal';
 import { ImportModal } from './components/ImportModal';
 import { WallPreview } from './components/WallPreview';
 import { exportResourcePack } from './utils/packExport';
+import { useI18n } from './i18n/I18nContext';
 
 const versionInfo: VersionInfo = {
   appName: 'SeedQueue Wall Maker',
-  version: 'v2.3.1',
+  version: 'v2.4.0',
   author: 'baf',
   authorUrl: 'https://github.com/bafv4',
   repoUrl: 'https://github.com/bafv4/mcsr-tools',
   changelog: [
+    {
+      version: 'v2.4.0',
+      date: '2025-11-10',
+      changes: [
+        'サウンド設定の改善',
+        'デザイン調整',
+        'i18n対応',
+      ],
+    },
     {
       version: 'v2.3.1',
       date: '2025-11-09',
@@ -64,6 +74,7 @@ const versionInfo: VersionInfo = {
 };
 
 function App() {
+  const { language, setLanguage, t } = useI18n();
   const {
     packInfo,
     layout,
@@ -126,7 +137,7 @@ function App() {
       await exportResourcePack(packInfo, layout, background, resolution, sounds, lockImages, replaceLockedInstances);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('リソースパックのエクスポートに失敗しました');
+      alert(t('exportFailed'));
     }
   };
 
@@ -154,7 +165,7 @@ function App() {
     if (typeof data.replaceLockedInstances === 'boolean') importPayload.replaceLockedInstances = data.replaceLockedInstances;
 
     importData(importPayload);
-    alert('リソースパックを読み込みました');
+    alert(t('importSuccess'));
   };
 
   const handleResolutionChange = (value: string) => {
@@ -196,13 +207,41 @@ function App() {
               <h1 className="text-2xl font-bold text-primary leading-none">
                 SeedQueue Wall Maker
               </h1>
-              <VersionChip versionInfo={versionInfo} />
+              <VersionChip
+                versionInfo={versionInfo}
+                languageSwitcher={
+                  <div className="flex gap-2">
+                    <Button
+                      variant={language === 'ja' ? 'primary' : 'outline'}
+                      size="sm"
+                      onClick={() => setLanguage('ja')}
+                      className="flex-1"
+                    >
+                      日本語
+                    </Button>
+                    <Button
+                      variant={language === 'en' ? 'primary' : 'outline'}
+                      size="sm"
+                      onClick={() => setLanguage('en')}
+                      className="flex-1"
+                    >
+                      English
+                    </Button>
+                  </div>
+                }
+                translations={{
+                  versionLabel: t('versionLabel'),
+                  authorLabel: t('authorLabel'),
+                  repositoryLabel: t('repositoryLabel'),
+                  changelogLabel: t('changelogLabel'),
+                }}
+              />
             </div>
             <div className="flex items-center gap-6">
               {!showCustomResolution ? (
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium text-secondary whitespace-nowrap">
-                    画面サイズ
+                    {t('resolution')}
                   </label>
                   <div className="w-48">
                     <Select
@@ -212,7 +251,7 @@ function App() {
                         { value: '1920x1080', label: 'FHD (1920x1080)' },
                         { value: '2560x1440', label: 'WQHD (2560x1440)' },
                         { value: '3840x2160', label: '4K (3840x2160)' },
-                        { value: 'custom', label: 'カスタム...' },
+                        { value: 'custom', label: t('custom') },
                       ]}
                     />
                   </div>
@@ -221,7 +260,7 @@ function App() {
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    placeholder="幅"
+                    placeholder={t('width')}
                     value={customResolution.width}
                     onChange={(e) => setCustomResolution({ ...customResolution, width: e.target.value })}
                     className="w-20 px-2 py-1 border border-default rounded text-sm bg-white dark:bg-gray-700 text-primary"
@@ -230,14 +269,14 @@ function App() {
                   <span className="text-secondary">×</span>
                   <input
                     type="number"
-                    placeholder="高さ"
+                    placeholder={t('height')}
                     value={customResolution.height}
                     onChange={(e) => setCustomResolution({ ...customResolution, height: e.target.value })}
                     className="w-20 px-2 py-1 border border-default rounded text-sm bg-white dark:bg-gray-700 text-primary"
                     min="1"
                   />
                   <Button size="sm" onClick={handleCustomResolutionApply}>
-                    適用
+                    {t('apply')}
                   </Button>
                   <Button
                     variant="outline"
@@ -247,7 +286,7 @@ function App() {
                       setCustomResolution({ width: '', height: '' });
                     }}
                   >
-                    キャンセル
+                    {t('cancel')}
                   </Button>
                 </div>
               )}
@@ -257,13 +296,13 @@ function App() {
                   size="sm"
                   onClick={() => setShowImportModal(true)}
                 >
-                  インポート
+                  {t('import')}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleShare}
-                  title="レイアウトを共有"
+                  title={t('shareLayout')}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -287,14 +326,14 @@ function App() {
                   variant="secondary"
                   size="sm"
                   onClick={() => {
-                    if (window.confirm('編集中の内容をリセットします。よろしいですか？')) {
+                    if (window.confirm(t('confirmReset'))) {
                       resetToDefault();
                     }
                   }}
                 >
-                  リセット
+                  {t('reset')}
                 </Button>
-                <Button size="sm" onClick={handleDownload}>ダウンロード</Button>
+                <Button size="sm" onClick={handleDownload}>{t('download')}</Button>
               </div>
             </div>
           </div>
@@ -310,11 +349,11 @@ function App() {
                 <Tabs defaultValue="info" className="h-full flex flex-col">
                   <div className="p-6 pb-4 flex-shrink-0">
                     <TabsList>
-                      <TabsTrigger value="info">情報</TabsTrigger>
-                      <TabsTrigger value="background">背景</TabsTrigger>
-                      <TabsTrigger value="layout">レイアウト</TabsTrigger>
-                      <TabsTrigger value="lockImages">ロック画像</TabsTrigger>
-                      <TabsTrigger value="sound">サウンド</TabsTrigger>
+                      <TabsTrigger value="info">{t('tabInfo')}</TabsTrigger>
+                      <TabsTrigger value="background">{t('tabBackground')}</TabsTrigger>
+                      <TabsTrigger value="layout">{t('tabLayout')}</TabsTrigger>
+                      <TabsTrigger value="lockImages">{t('tabLockImages')}</TabsTrigger>
+                      <TabsTrigger value="sound">{t('tabSound')}</TabsTrigger>
                     </TabsList>
                   </div>
 
@@ -346,12 +385,12 @@ function App() {
             {/* Right Panel - Preview */}
             <div className="lg:col-span-2">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">プレビュー</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{t('preview')}</h2>
                 <div className="flex justify-center">
                   <WallPreview />
                 </div>
                 <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                  <p>ヒント: エリアをドラッグして移動、角をドラッグしてリサイズできます</p>
+                  <p>{t('previewHint')}</p>
                 </div>
               </div>
             </div>

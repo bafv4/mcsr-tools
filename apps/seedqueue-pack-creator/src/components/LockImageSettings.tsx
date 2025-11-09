@@ -1,8 +1,10 @@
 import { useRef } from 'react';
 import { useWallStore } from '../store/useWallStore';
 import { Button, Switch } from '@mcsr-tools/ui';
+import { useI18n } from '../i18n/I18nContext';
 
 export function LockImageSettings() {
+  const { t } = useI18n();
   const { lockImages, addLockImage, removeLockImage, setLockImages } = useWallStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,21 +35,15 @@ export function LockImageSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">ロック画像設定</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          ロック画像は背景のテクスチャと同じ階層に出力されます。複数登録した場合はランダムで表示されます。
-        </p>
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('lockImagesTitle')}</h3>
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded">
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
           <div>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">ロック画像を使用</span>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              {lockImages.enabled ? '有効（画像なしの場合はデフォルトを使用）' : '無効（透明画像を出力）'}
-            </p>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">{t('useLockImages')}</span>
           </div>
           <Switch
             checked={lockImages.enabled}
@@ -72,14 +68,14 @@ export function LockImageSettings() {
               onClick={() => fileInputRef.current?.click()}
               className="w-full"
             >
-              画像を追加
+              {t('addImage')}
             </Button>
           </div>
 
           {lockImages.images.length > 0 && (
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                登録済み画像 ({lockImages.images.length})
+                {t('registeredImages')} ({lockImages.images.length})
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 {lockImages.images.map((image, index) => (
@@ -99,7 +95,7 @@ export function LockImageSettings() {
                         onClick={() => handleRemoveImage(index)}
                         className="bg-white dark:bg-gray-800 opacity-90 hover:opacity-100"
                       >
-                        削除
+                        {t('removeImage')}
                       </Button>
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1">

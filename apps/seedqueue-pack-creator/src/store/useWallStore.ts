@@ -48,19 +48,47 @@ export interface LockImageSettings {
   images: string[]; // Array of image data URLs
 }
 
+export type SoundMode = 'off' | 'default' | 'custom';
+export type GlobalSoundMode = 'off' | 'default' | 'custom';
+
 export interface SoundSettings {
-  // Built-in sounds (can be replaced with .ogg files)
-  lockInstance: string | null;
-  lockInstanceReplace: boolean;
-  resetInstance: string | null;
-  resetInstanceReplace: boolean;
-  // Custom sounds (require sounds.json)
-  playInstance: string | null;
-  resetAll: string | null;
-  resetColumn: string | null;
-  resetRow: string | null;
-  startBenchmark: string | null;
-  finishBenchmark: string | null;
+  // Global sound mode: off (all silent), default (all use SeedQueue built-in), custom (configure individually)
+  globalMode: GlobalSoundMode;
+
+  // Lock Instance sound
+  lockInstance: {
+    mode: SoundMode;
+    file: string | null; // Custom .ogg file (only used when mode is 'custom')
+  };
+
+  // Reset Instance sounds
+  resetInstanceMode: 'unified' | 'separate'; // Unified: all/column/row use same sound, Separate: configure individually
+  resetInstance: {
+    mode: SoundMode;
+    file: string | null;
+  };
+  resetAll: {
+    mode: SoundMode;
+    file: string | null;
+  };
+  resetColumn: {
+    mode: SoundMode;
+    file: string | null;
+  };
+  resetRow: {
+    mode: SoundMode;
+    file: string | null;
+  };
+
+  // Benchmark sounds
+  startBenchmark: {
+    mode: SoundMode;
+    file: string | null;
+  };
+  finishBenchmark: {
+    mode: SoundMode;
+    file: string | null;
+  };
 }
 
 export interface Resolution {
@@ -158,16 +186,36 @@ const defaultPackInfo: PackInfo = {
 };
 
 const defaultSounds: SoundSettings = {
-  lockInstance: null,
-  lockInstanceReplace: false,
-  resetInstance: null,
-  resetInstanceReplace: false,
-  playInstance: null,
-  resetAll: null,
-  resetColumn: null,
-  resetRow: null,
-  startBenchmark: null,
-  finishBenchmark: null,
+  globalMode: 'default',
+  lockInstance: {
+    mode: 'default',
+    file: null,
+  },
+  resetInstanceMode: 'unified',
+  resetInstance: {
+    mode: 'default',
+    file: null,
+  },
+  resetAll: {
+    mode: 'default',
+    file: null,
+  },
+  resetColumn: {
+    mode: 'default',
+    file: null,
+  },
+  resetRow: {
+    mode: 'default',
+    file: null,
+  },
+  startBenchmark: {
+    mode: 'default',
+    file: null,
+  },
+  finishBenchmark: {
+    mode: 'default',
+    file: null,
+  },
 };
 
 const defaultLockImages: LockImageSettings = {
