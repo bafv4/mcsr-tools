@@ -1,10 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const host = req.headers.host || '';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const currentUrl = `${protocol}://${host}${req.url}`;
-  const iconUrl = `${protocol}://${host}/icon.png`;
+  const currentUrl = `https://wall-maker.vercel.app${req.url}`;
+  const iconUrl = `https://wall-maker.vercel.app/icon.png`;
 
   // Extract name parameter from URL
   const shareName = req.query.name as string | undefined;
@@ -15,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Fetch and serve the index.html from the deployed site
   try {
-    const indexUrl = `${protocol}://${host}/index.html`;
+    const indexUrl = `https://wall-maker.vercel.app/index.html`;
     const indexResponse = await fetch(indexUrl);
 
     if (indexResponse.ok) {
