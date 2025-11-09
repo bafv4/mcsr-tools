@@ -29,14 +29,19 @@ function getLocalTextureUrl(itemId: string, nbtData?: any): string | undefined {
     const potionEffect = nbtData?.Potion;
     const variant = getPotionTextureVariant(potionEffect);
 
+    console.log(`[Potion Texture] itemId: ${itemId}, potionEffect: ${potionEffect}, variant: ${variant}`);
+
     if (variant) {
       // Construct the texture key with variant number
       const itemName = itemId.replace('minecraft:', '');
       normalizedId = `minecraft:${itemName}_${variant}`;
+      console.log(`[Potion Texture] normalizedId: ${normalizedId}`);
     }
   }
 
-  return getLocalTexture(normalizedId);
+  const textureUrl = getLocalTexture(normalizedId);
+  console.log(`[Texture] ${normalizedId} → ${textureUrl ? 'found' : 'NOT FOUND'}`);
+  return textureUrl;
 }
 
 /**
