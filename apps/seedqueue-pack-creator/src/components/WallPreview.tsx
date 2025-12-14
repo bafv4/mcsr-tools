@@ -1,21 +1,42 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useWallStore } from '../store/useWallStore';
+import { useWallStore, ImageLayer, ColorLayer, GradientLayer, BackgroundLayer } from '../store/useWallStore';
+import { useI18n } from '../i18n/I18nContext';
 
-type DragMode = 'move' | 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se' | 'resize-n' | 'resize-s' | 'resize-w' | 'resize-e' | null;
+type DragMode =
+  | 'move' | 'resize-nw' | 'resize-ne' | 'resize-sw' | 'resize-se' | 'resize-n' | 'resize-s' | 'resize-w' | 'resize-e'
+  | 'move-layer'
+  | 'scale-layer-nw' | 'scale-layer-ne' | 'scale-layer-sw' | 'scale-layer-se'
+  | 'resize-layer-nw' | 'resize-layer-ne' | 'resize-layer-sw' | 'resize-layer-se'
+  | 'crop-layer-nw' | 'crop-layer-ne' | 'crop-layer-sw' | 'crop-layer-se'
+  | null;
 
-export function WallPreview() {
+interface WallPreviewProps {
+  activeTab: string;
+}
+
+export function WallPreview({ activeTab }: WallPreviewProps) {
+  const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { resolution, layout, background, selectedArea, selectArea, updateArea } =
+  const { resolution, layout, background, selectedArea, selectArea, updateArea, updateLayer, selectedLayerId } =
     useWallStore();
   const [dragMode, setDragMode] = useState<DragMode>(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [originalArea, setOriginalArea] = useState<any>(null);
+  const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
+  const [originalLayerOffset, setOriginalLayerOffset] = useState({ x: 0, y: 0 });
+  const [originalLayerScale, setOriginalLayerScale] = useState(1);
+  const [originalLayerBounds, setOriginalLayerBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [originalCrop, setOriginalCrop] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const draggingLayerTypeRef = useRef<'color' | 'image' | 'gradient' | null>(null);
   const [scale, setScale] = useState(1);
   const [cursor, setCursor] = useState('grab');
+  const cursorRef = useRef('grab');
   const containerRef = useRef<HTMLDivElement>(null);
-  const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const layerImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const animationFrameRef = useRef<number | null>(null);
   const [imageLoadTrigger, setImageLoadTrigger] = useState(0);
+  const [showLayout, setShowLayout] = useState(true);
+  const [showBackground, setShowBackground] = useState(true);
 
   // Padding around the canvas (in canvas pixels)
   const CANVAS_PADDING = 20;
@@ -86,22 +107,38 @@ export function WallPreview() {
     ctx.clip();
 
     // Draw background (this will cover the pattern in the screen area)
-    drawBackground(ctx);
-
-    // Draw areas
-    drawArea(ctx, layout.main, '#2563eb', 'Main', selectedArea === 'main');
-    if (layout.locked.show) {
-      drawArea(ctx, layout.locked, '#ea580c', 'Locked', selectedArea === 'locked');
-    }
-    if (layout.preparing.show) {
-      drawArea(ctx, layout.preparing, '#16a34a', 'Preparing', selectedArea === 'preparing');
+    if (showBackground) {
+      drawBackground(ctx);
+    } else {
+      // Draw a neutral background when background is hidden
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, resolution.width, resolution.height);
     }
 
-    // Draw measurement guides if dragging
-    if (dragMode && selectedArea) {
-      const area = layout[selectedArea];
-      drawMeasurementGuides(ctx, area);
-      drawCenterGuides(ctx, area);
+    // Draw areas (only if showLayout is enabled)
+    if (showLayout) {
+      drawArea(ctx, layout.main, '#2563eb', 'Main', selectedArea === 'main');
+      if (layout.locked.show) {
+        drawArea(ctx, layout.locked, '#ea580c', 'Locked', selectedArea === 'locked');
+      }
+      if (layout.preparing.show) {
+        drawArea(ctx, layout.preparing, '#16a34a', 'Preparing', selectedArea === 'preparing');
+      }
+
+      // Draw measurement guides if dragging
+      if (dragMode && selectedArea) {
+        const area = layout[selectedArea];
+        drawMeasurementGuides(ctx, area);
+        drawCenterGuides(ctx, area);
+      }
+    }
+
+    // Draw selection handles for selected layer (when in background tab)
+    if (activeTab === 'background' && selectedLayerId) {
+      const selectedLayer = background.layers.find(l => l.id === selectedLayerId);
+      if (selectedLayer) {
+        drawLayerSelectionHandles(ctx, selectedLayer);
+      }
     }
 
     // Restore context (back to unpadded coordinates)
@@ -131,68 +168,99 @@ export function WallPreview() {
     // Draw at the edge of canvas
     ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
     ctx.restore();
-  }, [resolution, layout, background, selectedArea, dragMode, imageLoadTrigger]);
+  }, [resolution, layout, background, selectedArea, dragMode, imageLoadTrigger, showLayout, showBackground, activeTab, selectedLayerId]);
 
   const drawBackground = (ctx: CanvasRenderingContext2D) => {
-    if (background.type === 'color') {
-      ctx.fillStyle = background.color;
-      ctx.fillRect(0, 0, resolution.width, resolution.height);
-    } else if (background.type === 'image' && background.image) {
-      // Check if we need to load a new image
-      if (!backgroundImageRef.current || backgroundImageRef.current.src !== background.image) {
-        const img = new Image();
-        img.onload = () => {
-          backgroundImageRef.current = img;
-          // Trigger re-render by updating state
-          setImageLoadTrigger(prev => prev + 1);
-        };
-        img.onerror = () => {
-          console.error('Failed to load background image');
-          backgroundImageRef.current = null;
-        };
-        img.src = background.image;
-
-        // Draw placeholder while loading
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, resolution.width, resolution.height);
-      } else if (backgroundImageRef.current) {
-        // Use cached image
-        drawBackgroundWithImage(ctx, backgroundImageRef.current);
-      }
-    } else if (background.type === 'gradient') {
-      let gradient: CanvasGradient;
-
-      switch (background.gradientDirection) {
-        case 'vertical':
-          gradient = ctx.createLinearGradient(0, 0, 0, resolution.height);
-          break;
-        case 'horizontal':
-          gradient = ctx.createLinearGradient(0, 0, resolution.width, 0);
-          break;
-        case 'diagonal':
-          gradient = ctx.createLinearGradient(0, 0, resolution.width, resolution.height);
-          break;
-        case 'reverse-diagonal':
-          gradient = ctx.createLinearGradient(resolution.width, 0, 0, resolution.height);
-          break;
-      }
-
-      gradient.addColorStop(0, background.gradientStart);
-      gradient.addColorStop(1, background.gradientEnd);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, resolution.width, resolution.height);
-    }
-  };
-
-  const drawBackgroundWithImage = (ctx: CanvasRenderingContext2D, img: HTMLImageElement) => {
-    ctx.save();
-
-    // Fill background with black
+    // Draw black base first
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, resolution.width, resolution.height);
 
-    // Apply filters
-    ctx.filter = `brightness(${background.imageBrightness}%) blur(${background.imageBlur}px)`;
+    // Draw all layers from bottom to top
+    for (const layer of background.layers) {
+      switch (layer.type) {
+        case 'color':
+          drawColorLayer(ctx, layer as ColorLayer);
+          break;
+        case 'image':
+          drawImageLayerBackground(ctx, layer as ImageLayer);
+          break;
+        case 'gradient':
+          drawGradientLayer(ctx, layer as GradientLayer);
+          break;
+      }
+    }
+
+    // Clean up removed layers from cache
+    const currentLayerIds = new Set(background.layers.filter(l => l.type === 'image').map(l => l.id));
+    for (const id of layerImagesRef.current.keys()) {
+      if (!currentLayerIds.has(id)) {
+        layerImagesRef.current.delete(id);
+      }
+    }
+  };
+
+  const drawColorLayer = (ctx: CanvasRenderingContext2D, layer: ColorLayer) => {
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+    ctx.fillStyle = layer.color;
+    ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
+    ctx.restore();
+  };
+
+  const drawGradientLayer = (ctx: CanvasRenderingContext2D, layer: GradientLayer) => {
+    ctx.save();
+    ctx.globalAlpha = layer.opacity;
+
+    let gradient: CanvasGradient;
+
+    switch (layer.gradientDirection) {
+      case 'vertical':
+        gradient = ctx.createLinearGradient(layer.x, layer.y, layer.x, layer.y + layer.height);
+        break;
+      case 'horizontal':
+        gradient = ctx.createLinearGradient(layer.x, layer.y, layer.x + layer.width, layer.y);
+        break;
+      case 'diagonal':
+        gradient = ctx.createLinearGradient(layer.x, layer.y, layer.x + layer.width, layer.y + layer.height);
+        break;
+      case 'reverse-diagonal':
+        gradient = ctx.createLinearGradient(layer.x + layer.width, layer.y, layer.x, layer.y + layer.height);
+        break;
+    }
+
+    gradient.addColorStop(0, layer.gradientStart);
+    gradient.addColorStop(1, layer.gradientEnd);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
+    ctx.restore();
+  };
+
+  const drawImageLayerBackground = (ctx: CanvasRenderingContext2D, layer: ImageLayer) => {
+    const cachedImg = layerImagesRef.current.get(layer.id);
+
+    if (!cachedImg || cachedImg.src !== layer.image) {
+      // Load the image
+      const img = new Image();
+      img.onload = () => {
+        layerImagesRef.current.set(layer.id, img);
+        setImageLoadTrigger(prev => prev + 1);
+      };
+      img.onerror = () => {
+        console.error('Failed to load layer image:', layer.id);
+      };
+      img.src = layer.image;
+    } else {
+      // Draw the cached layer
+      drawLayerImage(ctx, cachedImg, layer);
+    }
+  };
+
+  const drawLayerImage = (ctx: CanvasRenderingContext2D, img: HTMLImageElement, layer: ImageLayer) => {
+    ctx.save();
+
+    // Apply opacity and filters
+    ctx.globalAlpha = layer.opacity;
+    ctx.filter = `brightness(${layer.brightness}%) blur(${layer.blur}px)`;
 
     // Calculate image dimensions preserving aspect ratio
     const imgAspect = img.width / img.height;
@@ -208,62 +276,77 @@ export function WallPreview() {
     }
 
     // Apply scale
-    const scaledWidth = imgWidth * background.imageScale;
-    const scaledHeight = imgHeight * background.imageScale;
+    const scaledWidth = imgWidth * layer.scale;
+    const scaledHeight = imgHeight * layer.scale;
 
     // Calculate position (centered + offset)
-    const x = (resolution.width - scaledWidth) / 2 + background.imageOffsetX;
-    const y = (resolution.height - scaledHeight) / 2 + background.imageOffsetY;
+    const x = (resolution.width - scaledWidth) / 2 + layer.offsetX;
+    const y = (resolution.height - scaledHeight) / 2 + layer.offsetY;
 
-    // Calculate the source rectangle from the original image that corresponds to the crop area
-    // We need to map the crop area (which is in resolution coordinates) back to image coordinates
+    // Set up clipping region to crop area
+    // The crop area defines where the image is visible, not how it's scaled
+    ctx.beginPath();
+    ctx.rect(layer.cropX, layer.cropY, layer.cropWidth, layer.cropHeight);
+    ctx.clip();
 
-    // First, calculate where the image is positioned
-    const imageLeft = x;
-    const imageTop = y;
-    const imageRight = x + scaledWidth;
-    const imageBottom = y + scaledHeight;
-
-    // Calculate crop area in resolution coordinates
-    const cropLeft = background.imageCropX;
-    const cropTop = background.imageCropY;
-    const cropRight = background.imageCropX + background.imageCropWidth;
-    const cropBottom = background.imageCropY + background.imageCropHeight;
-
-    // Find the intersection of the crop area with the image bounds
-    const visibleLeft = Math.max(cropLeft, imageLeft);
-    const visibleTop = Math.max(cropTop, imageTop);
-    const visibleRight = Math.min(cropRight, imageRight);
-    const visibleBottom = Math.min(cropBottom, imageBottom);
-
-    // If there's no intersection, don't draw anything
-    if (visibleLeft >= visibleRight || visibleTop >= visibleBottom) {
-      ctx.restore();
-      return;
-    }
-
-    // Map the visible area back to image coordinates
-    const srcLeft = (visibleLeft - imageLeft) / scaledWidth * img.width;
-    const srcTop = (visibleTop - imageTop) / scaledHeight * img.height;
-    const srcRight = (visibleRight - imageLeft) / scaledWidth * img.width;
-    const srcBottom = (visibleBottom - imageTop) / scaledHeight * img.height;
-
-    const srcWidth = srcRight - srcLeft;
-    const srcHeight = srcBottom - srcTop;
-
-    // Calculate the destination rectangle (scale the crop area to fill the entire resolution)
-    // Map from crop coordinates to full resolution coordinates
-    const destX = (visibleLeft - cropLeft) / background.imageCropWidth * resolution.width;
-    const destY = (visibleTop - cropTop) / background.imageCropHeight * resolution.height;
-    const destWidth = (visibleRight - visibleLeft) / background.imageCropWidth * resolution.width;
-    const destHeight = (visibleBottom - visibleTop) / background.imageCropHeight * resolution.height;
-
-    // Draw the cropped portion scaled to fill the screen
+    // Draw the image at its natural position (not stretched to fill crop area)
     ctx.drawImage(
       img,
-      srcLeft, srcTop, srcWidth, srcHeight,
-      destX, destY, destWidth, destHeight
+      0, 0, img.width, img.height,
+      x, y, scaledWidth, scaledHeight
     );
+
+    ctx.restore();
+  };
+
+  const drawLayerSelectionHandles = (ctx: CanvasRenderingContext2D, layer: BackgroundLayer) => {
+    const uiScale = getUIScale();
+    const handleSize = 10 * uiScale;
+
+    let x: number, y: number, width: number, height: number;
+
+    if (layer.type === 'image') {
+      // For image layers, use the crop area for the selection boundary
+      const imgLayer = layer as ImageLayer;
+      x = imgLayer.cropX;
+      y = imgLayer.cropY;
+      width = imgLayer.cropWidth;
+      height = imgLayer.cropHeight;
+    } else {
+      // Color or gradient layer
+      x = layer.x;
+      y = layer.y;
+      width = layer.width;
+      height = layer.height;
+    }
+
+    ctx.save();
+
+    // Draw dashed border around the layer
+    ctx.strokeStyle = '#3b82f6'; // Blue
+    ctx.lineWidth = 2 * uiScale;
+    ctx.setLineDash([6 * uiScale, 4 * uiScale]);
+    ctx.strokeRect(x, y, width, height);
+    ctx.setLineDash([]);
+
+    // Draw corner handles
+    ctx.fillStyle = '#3b82f6';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2 * uiScale;
+
+    const corners = [
+      { cx: x, cy: y }, // NW
+      { cx: x + width, cy: y }, // NE
+      { cx: x, cy: y + height }, // SW
+      { cx: x + width, cy: y + height }, // SE
+    ];
+
+    for (const corner of corners) {
+      ctx.beginPath();
+      ctx.rect(corner.cx - handleSize / 2, corner.cy - handleSize / 2, handleSize, handleSize);
+      ctx.fill();
+      ctx.stroke();
+    }
 
     ctx.restore();
   };
@@ -730,6 +813,102 @@ export function WallPreview() {
     return null;
   };
 
+  // Get base image dimensions (before scale is applied)
+  const getLayerBaseDimensions = (layer: ImageLayer) => {
+    const cachedImg = layerImagesRef.current.get(layer.id);
+    if (!cachedImg) return null;
+
+    const imgAspect = cachedImg.width / cachedImg.height;
+    const resAspect = resolution.width / resolution.height;
+
+    let imgWidth, imgHeight;
+    if (imgAspect > resAspect) {
+      imgWidth = resolution.width;
+      imgHeight = resolution.width / imgAspect;
+    } else {
+      imgHeight = resolution.height;
+      imgWidth = resolution.height * imgAspect;
+    }
+
+    return { width: imgWidth, height: imgHeight };
+  };
+
+  // Calculate actual image bounds (based on offset and scale, not crop)
+  // Used for drawing the image itself
+  const _getImageBounds = (layer: ImageLayer) => {
+    const baseDims = getLayerBaseDimensions(layer);
+    if (!baseDims) return null;
+
+    const scaledWidth = baseDims.width * layer.scale;
+    const scaledHeight = baseDims.height * layer.scale;
+    const x = (resolution.width - scaledWidth) / 2 + layer.offsetX;
+    const y = (resolution.height - scaledHeight) / 2 + layer.offsetY;
+
+    return { x, y, width: scaledWidth, height: scaledHeight };
+  };
+  // Keep for future use
+  void _getImageBounds;
+
+  // Get bounds for any layer type
+  // For image layers, returns the crop area (visible region)
+  const getAnyLayerBounds = (layer: BackgroundLayer): { x: number; y: number; width: number; height: number } | null => {
+    if (layer.type === 'image') {
+      // Return crop area for image layers
+      const imgLayer = layer as ImageLayer;
+      return { x: imgLayer.cropX, y: imgLayer.cropY, width: imgLayer.cropWidth, height: imgLayer.cropHeight };
+    } else {
+      // Color or gradient layer
+      return { x: layer.x, y: layer.y, width: layer.width, height: layer.height };
+    }
+  };
+
+  // Get resize handle for layer (only corners)
+  // shiftKey determines the operation type:
+  // - Image + no shift: scale, Image + shift: crop
+  // - Color/Gradient + no shift: scale (aspect ratio preserved), Color/Gradient + shift: resize (free)
+  const getLayerResizeHandle = (mouseX: number, mouseY: number, layer: BackgroundLayer, shiftKey: boolean = false): DragMode => {
+    const bounds = getAnyLayerBounds(layer);
+    if (!bounds) return null;
+
+    const uiScale = getUIScale();
+    const handleSize = 15 * uiScale;
+
+    // Determine which corner
+    let corner: 'nw' | 'ne' | 'sw' | 'se' | null = null;
+
+    if (Math.abs(mouseX - bounds.x) < handleSize && Math.abs(mouseY - bounds.y) < handleSize) {
+      corner = 'nw';
+    } else if (Math.abs(mouseX - (bounds.x + bounds.width)) < handleSize && Math.abs(mouseY - bounds.y) < handleSize) {
+      corner = 'ne';
+    } else if (Math.abs(mouseX - bounds.x) < handleSize && Math.abs(mouseY - (bounds.y + bounds.height)) < handleSize) {
+      corner = 'sw';
+    } else if (Math.abs(mouseX - (bounds.x + bounds.width)) < handleSize && Math.abs(mouseY - (bounds.y + bounds.height)) < handleSize) {
+      corner = 'se';
+    }
+
+    if (!corner) return null;
+
+    // Determine drag mode based on layer type and shift key
+    if (layer.type === 'image') {
+      if (shiftKey) {
+        // Shift + drag on image = crop
+        return `crop-layer-${corner}` as DragMode;
+      } else {
+        // Normal drag on image = scale
+        return `scale-layer-${corner}` as DragMode;
+      }
+    } else {
+      // Color or gradient layer
+      if (shiftKey) {
+        // Shift + drag = free resize
+        return `resize-layer-${corner}` as DragMode;
+      } else {
+        // Normal drag = scale (aspect ratio preserved)
+        return `scale-layer-${corner}` as DragMode;
+      }
+    }
+  };
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -737,7 +916,66 @@ export function WallPreview() {
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale - CANVAS_PADDING;
     const y = (e.clientY - rect.top) / scale - CANVAS_PADDING;
+    const shiftKey = e.shiftKey;
 
+    // Background tab: handle selected layer operations (all types)
+    if (activeTab === 'background' && selectedLayerId) {
+      const selectedLayer = background.layers.find(l => l.id === selectedLayerId);
+      if (selectedLayer) {
+        // Check for resize handle first
+        const layerResizeHandle = getLayerResizeHandle(x, y, selectedLayer, shiftKey);
+        if (layerResizeHandle) {
+          const bounds = getAnyLayerBounds(selectedLayer);
+          setDragMode(layerResizeHandle);
+          setDraggingLayerId(selectedLayer.id);
+          draggingLayerTypeRef.current = selectedLayer.type;
+          if (selectedLayer.type === 'image') {
+            const imgLayer = selectedLayer as ImageLayer;
+            setOriginalLayerScale(imgLayer.scale);
+            setOriginalLayerOffset({ x: imgLayer.offsetX, y: imgLayer.offsetY });
+            // Save original crop values for crop operations
+            setOriginalCrop({
+              x: imgLayer.cropX,
+              y: imgLayer.cropY,
+              width: imgLayer.cropWidth,
+              height: imgLayer.cropHeight,
+            });
+          } else {
+            // For color/gradient, store the original dimensions
+            setOriginalLayerScale(1);
+            setOriginalLayerOffset({ x: selectedLayer.x, y: selectedLayer.y });
+            setOriginalCrop(null);
+          }
+          setOriginalLayerBounds(bounds);
+          setDragStart({ x, y });
+          selectArea(null);
+          return;
+        }
+
+        // Otherwise, move the layer
+        setDragMode('move-layer');
+        setDraggingLayerId(selectedLayer.id);
+        draggingLayerTypeRef.current = selectedLayer.type;
+        if (selectedLayer.type === 'image') {
+          const imgLayer = selectedLayer as ImageLayer;
+          setOriginalLayerOffset({ x: imgLayer.offsetX, y: imgLayer.offsetY });
+          // Also save crop values so we can move them together with the image
+          setOriginalCrop({
+            x: imgLayer.cropX,
+            y: imgLayer.cropY,
+            width: imgLayer.cropWidth,
+            height: imgLayer.cropHeight,
+          });
+        } else {
+          setOriginalLayerOffset({ x: selectedLayer.x, y: selectedLayer.y });
+        }
+        setDragStart({ x, y });
+        selectArea(null); // Deselect any area
+        return;
+      }
+    }
+
+    // Layout tab or other tabs: handle area operations
     const areaName = getAreaAtPoint(x, y);
     if (!areaName) return;
 
@@ -894,10 +1132,272 @@ export function WallPreview() {
   };
 
   const processDrag = useCallback((x: number, y: number) => {
-    if (!dragMode || !selectedArea || !originalArea) return;
-
     const dx = x - dragStart.x;
     const dy = y - dragStart.y;
+
+    // Handle layer movement
+    if (dragMode === 'move-layer' && draggingLayerId) {
+      const newX = Math.round(originalLayerOffset.x + dx);
+      const newY = Math.round(originalLayerOffset.y + dy);
+
+      if (draggingLayerTypeRef.current === 'image' && originalCrop) {
+        // Move both the image offset and the crop area together
+        updateLayer(draggingLayerId, {
+          offsetX: newX,
+          offsetY: newY,
+          cropX: Math.round(originalCrop.x + dx),
+          cropY: Math.round(originalCrop.y + dy),
+        });
+      } else if (draggingLayerTypeRef.current !== 'image') {
+        // Color or gradient layer
+        updateLayer(draggingLayerId, {
+          x: newX,
+          y: newY,
+        });
+      }
+      return;
+    }
+
+    // Handle layer scaling (aspect ratio preserved)
+    if ((dragMode === 'scale-layer-nw' || dragMode === 'scale-layer-ne' ||
+         dragMode === 'scale-layer-sw' || dragMode === 'scale-layer-se') && draggingLayerId && originalLayerBounds) {
+      // Calculate the center of the layer (stays fixed during scaling)
+      const centerX = originalLayerBounds.x + originalLayerBounds.width / 2;
+      const centerY = originalLayerBounds.y + originalLayerBounds.height / 2;
+
+      // Calculate the distance from cursor to center
+      // Use the appropriate corner's direction
+      let targetHalfWidth: number;
+      let targetHalfHeight: number;
+
+      if (dragMode === 'scale-layer-se') {
+        targetHalfWidth = x - centerX;
+        targetHalfHeight = y - centerY;
+      } else if (dragMode === 'scale-layer-nw') {
+        targetHalfWidth = centerX - x;
+        targetHalfHeight = centerY - y;
+      } else if (dragMode === 'scale-layer-ne') {
+        targetHalfWidth = x - centerX;
+        targetHalfHeight = centerY - y;
+      } else { // scale-layer-sw
+        targetHalfWidth = centerX - x;
+        targetHalfHeight = y - centerY;
+      }
+
+      // Calculate scale based on the larger dimension change (maintaining aspect ratio)
+      const originalHalfWidth = originalLayerBounds.width / 2;
+      const originalHalfHeight = originalLayerBounds.height / 2;
+
+      // Use the dimension that gives the larger scale factor
+      const scaleFromWidth = targetHalfWidth / originalHalfWidth;
+      const scaleFromHeight = targetHalfHeight / originalHalfHeight;
+      const scaleMultiplier = Math.max(scaleFromWidth, scaleFromHeight);
+
+      if (draggingLayerTypeRef.current === 'image' && originalCrop) {
+        const newScale = Math.max(0.1, Math.min(10, originalLayerScale * scaleMultiplier));
+        const actualScaleMultiplier = newScale / originalLayerScale;
+
+        // Scale the crop area proportionally from its center
+        const cropCenterX = originalCrop.x + originalCrop.width / 2;
+        const cropCenterY = originalCrop.y + originalCrop.height / 2;
+        const newCropWidth = originalCrop.width * actualScaleMultiplier;
+        const newCropHeight = originalCrop.height * actualScaleMultiplier;
+        const newCropX = cropCenterX - newCropWidth / 2;
+        const newCropY = cropCenterY - newCropHeight / 2;
+
+        // Adjust offset to compensate for the image position shift due to scale change
+        // Image draw position: x = (resolution.width - scaledWidth) / 2 + offsetX
+        // When scale changes from s1 to s2, scaledWidth changes from w*s1 to w*s2
+        // The image center shifts by: (w*s2 - w*s1) / 2 = w * (s2 - s1) / 2
+        // We can express this as: originalScaledWidth * (actualScaleMultiplier - 1) / 2
+        // But we don't have originalScaledWidth directly.
+        //
+        // Alternative: the crop center should still show the same image content.
+        // Before scaling, the crop center is at screen position (cropCenterX, cropCenterY)
+        // The image pixel at that position = (cropCenterX - drawX) / scale = (cropCenterX - (res/2 - scaledW/2 + offsetX)) / scale
+        //
+        // To keep the same image pixel at the new crop center, we need to adjust offset.
+        // Since crop center stays the same but scaledWidth changes, we need:
+        // newOffsetX = originalOffsetX + (scaledWidth_new - scaledWidth_old) / 2 * (1 - actualScaleMultiplier)
+        //
+        // Simpler: when scale increases, image expands from center, so each point moves away from center.
+        // The crop center distance from image center changes by the scale factor.
+        // To keep the same content visible, offset should change to compensate.
+        //
+        // crop center in image coords (relative to image center):
+        // relX = cropCenterX - (resolution.width/2 + offsetX)
+        // relY = cropCenterY - (resolution.height/2 + offsetY)
+        //
+        // After scaling, to keep the same image content at crop center:
+        // new relX = relX * actualScaleMultiplier
+        // So: cropCenterX - (resolution.width/2 + newOffsetX) = (cropCenterX - (resolution.width/2 + offsetX)) * actualScaleMultiplier
+        // Solving for newOffsetX:
+        // newOffsetX = cropCenterX - resolution.width/2 - (cropCenterX - resolution.width/2 - offsetX) * actualScaleMultiplier
+        //            = cropCenterX - resolution.width/2 - cropCenterX * actualScaleMultiplier + resolution.width/2 * actualScaleMultiplier + offsetX * actualScaleMultiplier
+        //            = cropCenterX * (1 - actualScaleMultiplier) + resolution.width/2 * (actualScaleMultiplier - 1) + offsetX * actualScaleMultiplier
+        //            = (resolution.width/2 - cropCenterX) * (actualScaleMultiplier - 1) + offsetX * actualScaleMultiplier
+
+        const originalOffsetX = originalLayerOffset.x;
+        const originalOffsetY = originalLayerOffset.y;
+
+        const newOffsetX = (resolution.width / 2 - cropCenterX) * (actualScaleMultiplier - 1) + originalOffsetX * actualScaleMultiplier;
+        const newOffsetY = (resolution.height / 2 - cropCenterY) * (actualScaleMultiplier - 1) + originalOffsetY * actualScaleMultiplier;
+
+        updateLayer(draggingLayerId, {
+          scale: newScale,
+          offsetX: Math.round(newOffsetX),
+          offsetY: Math.round(newOffsetY),
+          cropX: Math.round(newCropX),
+          cropY: Math.round(newCropY),
+          cropWidth: Math.round(newCropWidth),
+          cropHeight: Math.round(newCropHeight),
+        });
+      } else if (draggingLayerTypeRef.current !== 'image') {
+        // Color or gradient layer - update width/height maintaining aspect ratio
+        const newWidth = Math.max(10, Math.round(originalLayerBounds.width * scaleMultiplier));
+        const newHeight = Math.max(10, Math.round(originalLayerBounds.height * scaleMultiplier));
+        const newX = Math.round(centerX - newWidth / 2);
+        const newY = Math.round(centerY - newHeight / 2);
+        updateLayer(draggingLayerId, {
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        });
+      }
+      return;
+    }
+
+    // Handle layer free resize (color/gradient only, shift+drag)
+    if ((dragMode === 'resize-layer-nw' || dragMode === 'resize-layer-ne' ||
+         dragMode === 'resize-layer-sw' || dragMode === 'resize-layer-se') && draggingLayerId && originalLayerBounds) {
+      let newX = originalLayerBounds.x;
+      let newY = originalLayerBounds.y;
+      let newWidth = originalLayerBounds.width;
+      let newHeight = originalLayerBounds.height;
+
+      if (dragMode === 'resize-layer-se') {
+        newWidth = Math.max(10, Math.round(originalLayerBounds.width + dx));
+        newHeight = Math.max(10, Math.round(originalLayerBounds.height + dy));
+      } else if (dragMode === 'resize-layer-nw') {
+        newWidth = Math.max(10, Math.round(originalLayerBounds.width - dx));
+        newHeight = Math.max(10, Math.round(originalLayerBounds.height - dy));
+        newX = Math.round(originalLayerBounds.x + originalLayerBounds.width - newWidth);
+        newY = Math.round(originalLayerBounds.y + originalLayerBounds.height - newHeight);
+      } else if (dragMode === 'resize-layer-ne') {
+        newWidth = Math.max(10, Math.round(originalLayerBounds.width + dx));
+        newHeight = Math.max(10, Math.round(originalLayerBounds.height - dy));
+        newY = Math.round(originalLayerBounds.y + originalLayerBounds.height - newHeight);
+      } else if (dragMode === 'resize-layer-sw') {
+        newWidth = Math.max(10, Math.round(originalLayerBounds.width - dx));
+        newHeight = Math.max(10, Math.round(originalLayerBounds.height + dy));
+        newX = Math.round(originalLayerBounds.x + originalLayerBounds.width - newWidth);
+      }
+
+      updateLayer(draggingLayerId, {
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight,
+      });
+      return;
+    }
+
+    // Handle image layer cropping (shift+drag on image) - adjusts crop area freely
+    // This changes the visible area of the image, not the image size itself
+    if ((dragMode === 'crop-layer-nw' || dragMode === 'crop-layer-ne' ||
+         dragMode === 'crop-layer-sw' || dragMode === 'crop-layer-se') && draggingLayerId && originalCrop) {
+      // Use stored original crop values
+      const originalCropX = originalCrop.x;
+      const originalCropY = originalCrop.y;
+      const originalCropWidth = originalCrop.width;
+      const originalCropHeight = originalCrop.height;
+
+      let newCropX = originalCropX;
+      let newCropY = originalCropY;
+      let newCropWidth = originalCropWidth;
+      let newCropHeight = originalCropHeight;
+
+      // Adjust crop area - each corner moves its adjacent edges independently
+      // Crop area aspect ratio can change freely
+      if (dragMode === 'crop-layer-se') {
+        // SE corner: adjust right and bottom edges
+        newCropWidth = Math.max(50, originalCropWidth + dx);
+        newCropHeight = Math.max(50, originalCropHeight + dy);
+        // Clamp to resolution bounds
+        if (newCropX + newCropWidth > resolution.width) {
+          newCropWidth = resolution.width - newCropX;
+        }
+        if (newCropY + newCropHeight > resolution.height) {
+          newCropHeight = resolution.height - newCropY;
+        }
+      } else if (dragMode === 'crop-layer-nw') {
+        // NW corner: adjust left and top edges
+        const anchorRight = originalCropX + originalCropWidth;
+        const anchorBottom = originalCropY + originalCropHeight;
+        newCropX = originalCropX + dx;
+        newCropY = originalCropY + dy;
+        // Clamp to bounds
+        if (newCropX < 0) newCropX = 0;
+        if (newCropY < 0) newCropY = 0;
+        // Calculate new width/height based on anchor
+        newCropWidth = anchorRight - newCropX;
+        newCropHeight = anchorBottom - newCropY;
+        // Ensure minimum size
+        if (newCropWidth < 50) {
+          newCropWidth = 50;
+          newCropX = anchorRight - 50;
+        }
+        if (newCropHeight < 50) {
+          newCropHeight = 50;
+          newCropY = anchorBottom - 50;
+        }
+      } else if (dragMode === 'crop-layer-ne') {
+        // NE corner: adjust right and top edges
+        const anchorBottom = originalCropY + originalCropHeight;
+        newCropWidth = Math.max(50, originalCropWidth + dx);
+        newCropY = originalCropY + dy;
+        // Clamp to bounds
+        if (newCropY < 0) newCropY = 0;
+        if (newCropX + newCropWidth > resolution.width) {
+          newCropWidth = resolution.width - newCropX;
+        }
+        // Calculate new height based on anchor
+        newCropHeight = anchorBottom - newCropY;
+        // Ensure minimum size
+        if (newCropHeight < 50) {
+          newCropHeight = 50;
+          newCropY = anchorBottom - 50;
+        }
+      } else if (dragMode === 'crop-layer-sw') {
+        // SW corner: adjust left and bottom edges
+        const anchorRight = originalCropX + originalCropWidth;
+        newCropX = originalCropX + dx;
+        newCropHeight = Math.max(50, originalCropHeight + dy);
+        // Clamp to bounds
+        if (newCropX < 0) newCropX = 0;
+        if (newCropY + newCropHeight > resolution.height) {
+          newCropHeight = resolution.height - newCropY;
+        }
+        // Calculate new width based on anchor
+        newCropWidth = anchorRight - newCropX;
+        // Ensure minimum size
+        if (newCropWidth < 50) {
+          newCropWidth = 50;
+          newCropX = anchorRight - 50;
+        }
+      }
+
+      updateLayer(draggingLayerId, {
+        cropX: Math.round(newCropX),
+        cropY: Math.round(newCropY),
+        cropWidth: Math.round(newCropWidth),
+        cropHeight: Math.round(newCropHeight),
+      });
+      return;
+    }
+
+    if (!dragMode || !selectedArea || !originalArea) return;
 
     // Cancel previous animation frame
     if (animationFrameRef.current) {
@@ -1016,7 +1516,15 @@ export function WallPreview() {
       }
       animationFrameRef.current = null;
     });
-  }, [dragMode, selectedArea, originalArea, dragStart, snapToEdgesAndAreas, updateArea]);
+  }, [dragMode, selectedArea, originalArea, dragStart, snapToEdgesAndAreas, updateArea, draggingLayerId, originalLayerOffset, originalLayerScale, originalLayerBounds, originalCrop, updateLayer, resolution.width, resolution.height]);
+
+  // Helper to update cursor only when changed
+  const updateCursor = useCallback((newCursor: string) => {
+    if (cursorRef.current !== newCursor) {
+      cursorRef.current = newCursor;
+      setCursor(newCursor);
+    }
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | MouseEvent) => {
     const canvas = canvasRef.current;
@@ -1026,49 +1534,70 @@ export function WallPreview() {
     const x = (e.clientX - rect.left) / scale - CANVAS_PADDING;
     const y = (e.clientY - rect.top) / scale - CANVAS_PADDING;
 
-    if (dragMode && selectedArea && originalArea) {
-      // Currently dragging - set cursor based on drag mode
-      if (dragMode === 'move') {
-        setCursor('move');
-      } else if (dragMode === 'resize-nw' || dragMode === 'resize-se') {
-        setCursor('nwse-resize');
-      } else if (dragMode === 'resize-ne' || dragMode === 'resize-sw') {
-        setCursor('nesw-resize');
-      } else if (dragMode === 'resize-n' || dragMode === 'resize-s') {
-        setCursor('ns-resize');
-      } else if (dragMode === 'resize-w' || dragMode === 'resize-e') {
-        setCursor('ew-resize');
-      }
+    // Currently dragging a layer (move, scale, resize, or crop)
+    if ((dragMode === 'move-layer' ||
+         dragMode?.startsWith('scale-layer-') ||
+         dragMode?.startsWith('resize-layer-') ||
+         dragMode?.startsWith('crop-layer-')) && draggingLayerId) {
+      processDrag(x, y);
+      return;
+    }
 
+    if (dragMode && selectedArea && originalArea) {
       processDrag(x, y);
     } else {
-      // Not dragging, update cursor based on hover position
+      // Not dragging, update cursor based on hover position and active tab
+      // Background tab with selected layer: check for resize handles first
+      if (activeTab === 'background' && selectedLayerId) {
+        const selectedLayer = background.layers.find(l => l.id === selectedLayerId);
+        if (selectedLayer) {
+          // Check for resize handles (without shift key for hover cursor)
+          const layerHandle = getLayerResizeHandle(x, y, selectedLayer, false);
+          if (layerHandle) {
+            if (layerHandle.endsWith('-nw') || layerHandle.endsWith('-se')) {
+              updateCursor('nwse-resize');
+            } else {
+              updateCursor('nesw-resize');
+            }
+            return;
+          }
+        }
+        updateCursor('move');
+        return;
+      }
+
       const areaName = getAreaAtPoint(x, y);
       if (areaName) {
         const area = layout[areaName];
         const resizeHandle = getResizeHandle(x, y, area);
 
         if (resizeHandle === 'resize-nw' || resizeHandle === 'resize-se') {
-          setCursor('nwse-resize');
+          updateCursor('nwse-resize');
         } else if (resizeHandle === 'resize-ne' || resizeHandle === 'resize-sw') {
-          setCursor('nesw-resize');
+          updateCursor('nesw-resize');
         } else if (resizeHandle === 'resize-n' || resizeHandle === 'resize-s') {
-          setCursor('ns-resize');
+          updateCursor('ns-resize');
         } else if (resizeHandle === 'resize-w' || resizeHandle === 'resize-e') {
-          setCursor('ew-resize');
+          updateCursor('ew-resize');
         } else {
-          setCursor('move');
+          updateCursor('move');
         }
       } else {
-        setCursor('default');
+        updateCursor('default');
       }
     }
-  }, [dragMode, selectedArea, originalArea, scale, layout, processDrag]);
+  }, [dragMode, selectedArea, originalArea, scale, layout, processDrag, activeTab, background.layers, selectedLayerId, draggingLayerId, updateCursor]);
 
   const handleMouseUp = useCallback(() => {
     setDragMode(null);
     setDragStart({ x: 0, y: 0 });
     setOriginalArea(null);
+    setDraggingLayerId(null);
+    draggingLayerTypeRef.current = null;
+    setOriginalLayerOffset({ x: 0, y: 0 });
+    setOriginalLayerScale(1);
+    setOriginalLayerBounds(null);
+    setOriginalCrop(null);
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -1094,6 +1623,26 @@ export function WallPreview() {
 
   return (
     <div ref={containerRef} className="w-full">
+      <div className="flex gap-4 mb-2 text-sm">
+        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showBackground}
+            onChange={(e) => setShowBackground(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-gray-700 dark:text-gray-300">{t('showBackground')}</span>
+        </label>
+        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showLayout}
+            onChange={(e) => setShowLayout(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-gray-700 dark:text-gray-300">{t('showLayout')}</span>
+        </label>
+      </div>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}

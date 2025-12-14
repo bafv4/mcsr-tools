@@ -266,8 +266,26 @@ export async function importResourcePack(file: File): Promise<ImportedData> {
     if (bgImageFile) {
       const bgData = await bgImageFile.async('base64');
       const ext = bgImageFile.name.endsWith('.png') ? 'png' : 'jpeg';
-      result.background.image = `data:image/${ext};base64,${bgData}`;
+      const imageDataUrl = `data:image/${ext};base64,${bgData}`;
+
+      // Convert single image to layer format
+      result.background.image = null; // Clear legacy field
+      result.background.imageLayers = [{
+        id: crypto.randomUUID(),
+        image: imageDataUrl,
+        brightness: 100,
+        blur: 0,
+        offsetX: 0,
+        offsetY: 0,
+        scale: 1,
+        cropX: 0,
+        cropY: 0,
+        cropWidth: result.resolution!.width,
+        cropHeight: result.resolution!.height,
+      }];
       result.background.type = 'image';
+    } else {
+      result.background.imageLayers = [];
     }
 
     // Initialize lock images

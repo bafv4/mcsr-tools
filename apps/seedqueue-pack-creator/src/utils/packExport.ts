@@ -1,10 +1,108 @@
 import JSZip from 'jszip';
 import { downloadFile } from '@mcsr-tools/utils';
-import { PackInfo, WallLayout, BackgroundSettings, Resolution, SoundSettings, LockImageSettings } from '../store/useWallStore';
+import { PackInfo, WallLayout, BackgroundSettings, Resolution, SoundSettings, LockImageSettings, ImageLayer, ColorLayer, GradientLayer } from '../store/useWallStore';
 
 async function dataURLToBlob(dataURL: string): Promise<Blob> {
   const response = await fetch(dataURL);
   return response.blob();
+}
+
+async function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function drawColorLayer(
+  ctx: CanvasRenderingContext2D,
+  layer: ColorLayer
+) {
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+  ctx.fillStyle = layer.color;
+  ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
+  ctx.restore();
+}
+
+function drawGradientLayer(
+  ctx: CanvasRenderingContext2D,
+  layer: GradientLayer
+) {
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+
+  let gradient: CanvasGradient;
+
+  switch (layer.gradientDirection) {
+    case 'vertical':
+      gradient = ctx.createLinearGradient(layer.x, layer.y, layer.x, layer.y + layer.height);
+      break;
+    case 'horizontal':
+      gradient = ctx.createLinearGradient(layer.x, layer.y, layer.x + layer.width, layer.y);
+      break;
+    case 'diagonal':
+      gradient = ctx.createLinearGradient(layer.x, layer.y, layer.x + layer.width, layer.y + layer.height);
+      break;
+    case 'reverse-diagonal':
+      gradient = ctx.createLinearGradient(layer.x + layer.width, layer.y, layer.x, layer.y + layer.height);
+      break;
+  }
+
+  gradient.addColorStop(0, layer.gradientStart);
+  gradient.addColorStop(1, layer.gradientEnd);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(layer.x, layer.y, layer.width, layer.height);
+  ctx.restore();
+}
+
+function drawImageLayer(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  layer: ImageLayer,
+  resolution: Resolution
+) {
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+  ctx.filter = `brightness(${layer.brightness}%) blur(${layer.blur}px)`;
+
+  // Calculate image dimensions preserving aspect ratio
+  const imgAspect = img.width / img.height;
+  const resAspect = resolution.width / resolution.height;
+
+  let imgWidth, imgHeight;
+  if (imgAspect > resAspect) {
+    imgWidth = resolution.width;
+    imgHeight = resolution.width / imgAspect;
+  } else {
+    imgHeight = resolution.height;
+    imgWidth = resolution.height * imgAspect;
+  }
+
+  // Apply scale
+  const scaledWidth = imgWidth * layer.scale;
+  const scaledHeight = imgHeight * layer.scale;
+
+  // Calculate position (centered + offset)
+  const x = (resolution.width - scaledWidth) / 2 + layer.offsetX;
+  const y = (resolution.height - scaledHeight) / 2 + layer.offsetY;
+
+  // Set up clipping region to crop area
+  // The crop area defines where the image is visible, not how it's scaled
+  ctx.beginPath();
+  ctx.rect(layer.cropX, layer.cropY, layer.cropWidth, layer.cropHeight);
+  ctx.clip();
+
+  // Draw the image at its natural position (not stretched to fill crop area)
+  ctx.drawImage(
+    img,
+    0, 0, img.width, img.height,
+    x, y, scaledWidth, scaledHeight
+  );
+
+  ctx.restore();
 }
 
 async function generateBackgroundImage(
@@ -17,55 +115,25 @@ async function generateBackgroundImage(
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
 
-  if (background.type === 'color') {
-    ctx.fillStyle = background.color;
-    ctx.fillRect(0, 0, resolution.width, resolution.height);
-  } else if (background.type === 'image' && background.image) {
-    const img = new Image();
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = background.image!;
-    });
+  // Draw black base first
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, resolution.width, resolution.height);
 
-    ctx.save();
-    ctx.filter = `brightness(${background.imageBrightness}%) blur(${background.imageBlur}px)`;
-
-    const baseScale = Math.max(
-      resolution.width / img.width,
-      resolution.height / img.height
-    );
-    const scale = baseScale * background.imageScale;
-
-    const x = (resolution.width - img.width * scale) / 2 + background.imageOffsetX;
-    const y = (resolution.height - img.height * scale) / 2 + background.imageOffsetY;
-
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, resolution.width, resolution.height);
-    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-    ctx.restore();
-  } else if (background.type === 'gradient') {
-    let gradient: CanvasGradient;
-
-    switch (background.gradientDirection) {
-      case 'vertical':
-        gradient = ctx.createLinearGradient(0, 0, 0, resolution.height);
+  // Draw all layers from bottom to top
+  for (const layer of background.layers) {
+    switch (layer.type) {
+      case 'color':
+        drawColorLayer(ctx, layer as ColorLayer);
         break;
-      case 'horizontal':
-        gradient = ctx.createLinearGradient(0, 0, resolution.width, 0);
+      case 'image': {
+        const img = await loadImage((layer as ImageLayer).image);
+        drawImageLayer(ctx, img, layer as ImageLayer, resolution);
         break;
-      case 'diagonal':
-        gradient = ctx.createLinearGradient(0, 0, resolution.width, resolution.height);
-        break;
-      case 'reverse-diagonal':
-        gradient = ctx.createLinearGradient(resolution.width, 0, 0, resolution.height);
+      }
+      case 'gradient':
+        drawGradientLayer(ctx, layer as GradientLayer);
         break;
     }
-
-    gradient.addColorStop(0, background.gradientStart);
-    gradient.addColorStop(1, background.gradientEnd);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, resolution.width, resolution.height);
   }
 
   return new Promise((resolve) => {
@@ -114,8 +182,9 @@ export async function exportResourcePack(
   // Remove useGrid flag (internal only, not part of SeedQueue spec)
   delete customLayout.main.useGrid;
 
-  // Only remove rows and columns from main if useGrid is disabled
-  if (!layout.main.useGrid) {
+  // Only remove rows and columns from main if useGrid is explicitly disabled
+  // Default to true if undefined (for backwards compatibility with shared URLs)
+  if (layout.main.useGrid === false) {
     delete customLayout.main.rows;
     delete customLayout.main.columns;
   }
@@ -134,11 +203,11 @@ export async function exportResourcePack(
         const cleaned = { ...area };
         delete cleaned.show; // Remove show flag from export
 
-        // Only remove rows and columns if useGrid is disabled
+        // Only remove rows and columns if useGrid is explicitly disabled
         const useGrid = area.useGrid;
         delete cleaned.useGrid; // Remove useGrid flag from export
 
-        if (!useGrid) {
+        if (useGrid === false) {
           delete cleaned.rows;
           delete cleaned.columns;
         }
@@ -158,8 +227,8 @@ export async function exportResourcePack(
     delete customLayout.preparing.show; // Remove show flag from export
     delete customLayout.preparing.useGrid; // Remove useGrid flag from export
 
-    // Only remove rows and columns if useGrid is disabled
-    if (!useGrid) {
+    // Only remove rows and columns if useGrid is explicitly disabled
+    if (useGrid === false) {
       delete customLayout.preparing.rows;
       delete customLayout.preparing.columns;
     }
@@ -177,8 +246,8 @@ export async function exportResourcePack(
     delete customLayout.locked.show; // Remove show flag from export
     delete customLayout.locked.useGrid; // Remove useGrid flag from export
 
-    // Only remove rows and columns if useGrid is disabled
-    if (!useGrid) {
+    // Only remove rows and columns if useGrid is explicitly disabled
+    if (useGrid === false) {
       delete customLayout.locked.rows;
       delete customLayout.locked.columns;
     }
@@ -201,20 +270,15 @@ export async function exportResourcePack(
 
   // Add lock images
   if (!lockImages.enabled) {
-    // Disabled: create a transparent 1x1 PNG as lock.png
-    const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, 1, 1);
-      const transparentBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob), 'image/png');
-      });
-      if (transparentBlob) {
-        texturesFolder?.file('lock.png', transparentBlob);
-      }
+    // Disabled: use pre-generated transparent 32x32 PNG as lock.png
+    // Base64-encoded minimal transparent 32x32 PNG
+    const transparentPngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAADklEQVR42mNgGAWjYBQAAAJAAAH3bfLDAAAAAElFTkSuQmCC';
+    const binaryString = atob(transparentPngBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
+    texturesFolder?.file('lock.png', bytes);
   } else if (lockImages.images.length === 1) {
     // Exactly 1 image: export as lock.png
     const lockImageBlob = await dataURLToBlob(lockImages.images[0]);
@@ -232,17 +296,17 @@ export async function exportResourcePack(
   // Create sounds.json based on globalMode
   if (sounds.globalMode !== 'default') {
     const soundsJson: any = {
-      lock_instance: { sounds: [] },
-      reset_all: { sounds: [] },
-      reset_column: { sounds: [] },
-      reset_row: { sounds: [] },
-      start_benchmark: { sounds: [] },
-      finish_benchmark: { sounds: [] },
+      lock_instance: { replace: true, sounds: [] },
+      reset_all: { replace: true, sounds: [] },
+      reset_column: { replace: true, sounds: [] },
+      reset_row: { replace: true, sounds: [] },
+      start_benchmark: { replace: true, sounds: [] },
+      finish_benchmark: { replace: true, sounds: [] },
     };
 
     if (sounds.globalMode === 'off') {
       // Off mode: all sounds are empty arrays (silent)
-      // soundsJson is already initialized with empty arrays
+      // soundsJson is already initialized with empty arrays and replace: true
     } else if (sounds.globalMode === 'custom') {
       // Custom mode: process each sound individually
       const processSound = async (
@@ -252,7 +316,7 @@ export async function exportResourcePack(
         const sound = sounds[soundKey];
 
         if (sound.mode === 'off') {
-          // Off: empty array (silent)
+          // Off: empty array (silent), replace: true already set
           soundsJson[jsonKey].sounds = [];
         } else if (sound.mode === 'default') {
           // Default: reference built-in SeedQueue sound

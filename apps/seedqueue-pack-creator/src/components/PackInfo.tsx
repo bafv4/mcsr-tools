@@ -1,12 +1,15 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useWallStore } from '../store/useWallStore';
 import { Input, Button } from '@mcsr-tools/ui';
 import { useI18n } from '../i18n/I18nContext';
+import { IconCropModal } from './IconCropModal';
 
 export function PackInfo() {
   const { t } = useI18n();
   const { packInfo, setPackInfo } = useWallStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
 
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -14,9 +17,26 @@ export function PackInfo() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      setPackInfo({ icon: event.target?.result as string });
+      const imageData = event.target?.result as string;
+      setPendingImage(imageData);
+      setShowCropModal(true);
     };
     reader.readAsDataURL(file);
+
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropComplete = (croppedImage: string) => {
+    setPackInfo({ icon: croppedImage });
+    setPendingImage(null);
+  };
+
+  const handleCropClose = () => {
+    setShowCropModal(false);
+    setPendingImage(null);
   };
 
   return (
@@ -71,6 +91,15 @@ export function PackInfo() {
           </div>
         )}
       </div>
+
+      {pendingImage && (
+        <IconCropModal
+          isOpen={showCropModal}
+          onClose={handleCropClose}
+          imageData={pendingImage}
+          onCrop={handleCropComplete}
+        />
+      )}
     </div>
   );
 }

@@ -41,7 +41,17 @@
       "Bash(pnpm update:*)",
       "Bash(nul)",
       "Bash(exit 0)",
-      "Bash(dir /b \"c:\\Users\\yuanq\\OneDrive\\デスクトップ\\mcsr-tools\\apps\\seedqueue-pack-creator\\dist\")"
+      "Bash(dir /b \"c:\\Users\\yuanq\\OneDrive\\デスクトップ\\mcsr-tools\\apps\\seedqueue-pack-creator\\dist\")",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm --filter @mcsr-tools/seedqueue-pack-creator type-check:*)",
+      "Bash(~/.local/share/pnpm/pnpm:*)",
+      "Bash(export PATH=\"$HOME/.local/share/pnpm:$HOME/.local/bin:$PATH\")",
+      "Bash(/home/bafv4/.nvm/versions/node/v24.12.0/lib/node_modules/corepack/shims/pnpm:*)",
+      "Bash(source:*)",
+      "Bash(nvm use node)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v24.12.0/bin:$PATH\")"
     ],
     "deny": [],
     "ask": []

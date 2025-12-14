@@ -17,24 +17,58 @@ export interface WallLayout {
   preparing: Area & { show: boolean };
 }
 
-export type BackgroundType = 'color' | 'image' | 'gradient';
+export type BackgroundLayerType = 'color' | 'image' | 'gradient';
 
-export interface BackgroundSettings {
-  type: BackgroundType;
+// Base layer properties shared by all layer types
+interface BaseLayer {
+  id: string;
+  type: BackgroundLayerType;
+  opacity: number; // 0-1, 1 = fully opaque
+}
+
+// Color layer
+export interface ColorLayer extends BaseLayer {
+  type: 'color';
   color: string;
-  image: string | null;
-  imageBrightness: number;
-  imageBlur: number;
-  imageOffsetX: number;
-  imageOffsetY: number;
-  imageScale: number;
-  imageCropX: number;
-  imageCropY: number;
-  imageCropWidth: number;
-  imageCropHeight: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Image layer with positioning and cropping
+export interface ImageLayer extends BaseLayer {
+  type: 'image';
+  image: string;
+  brightness: number;
+  blur: number;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
+}
+
+// Gradient layer
+export interface GradientLayer extends BaseLayer {
+  type: 'gradient';
   gradientStart: string;
   gradientEnd: string;
   gradientDirection: 'vertical' | 'horizontal' | 'diagonal' | 'reverse-diagonal';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Union type for all layer types
+export type BackgroundLayer = ColorLayer | ImageLayer | GradientLayer;
+
+export interface BackgroundSettings {
+  // Layers ordered from bottom to top
+  layers: BackgroundLayer[];
 }
 
 export interface PackInfo {
@@ -104,6 +138,7 @@ interface WallStore {
   sounds: SoundSettings;
   lockImages: LockImageSettings;
   selectedArea: 'main' | 'locked' | 'preparing' | null;
+  selectedLayerId: string | null;
   replaceLockedInstances: boolean;
 
   setResolution: (resolution: Resolution) => void;
@@ -116,9 +151,15 @@ interface WallStore {
   addLockImage: (image: string) => void;
   removeLockImage: (index: number) => void;
   selectArea: (area: 'main' | 'locked' | 'preparing' | null) => void;
+  selectLayer: (id: string | null) => void;
   setReplaceLockedInstances: (value: boolean) => void;
   resetToDefault: () => void;
   importData: (data: Partial<WallStore>) => void;
+  // Background layer management
+  addLayer: (type: BackgroundLayerType, data?: Partial<BackgroundLayer>) => void;
+  removeLayer: (id: string) => void;
+  updateLayer: (id: string, updates: Partial<BackgroundLayer>) => void;
+  reorderLayers: (fromIndex: number, toIndex: number) => void;
 }
 
 const defaultResolution: Resolution = {
@@ -162,21 +203,18 @@ const defaultLayout: WallLayout = {
 };
 
 const defaultBackground: BackgroundSettings = {
-  type: 'color',
-  color: '#1a1a1a',
-  image: null,
-  imageBrightness: 100,
-  imageBlur: 0,
-  imageOffsetX: 0,
-  imageOffsetY: 0,
-  imageScale: 1,
-  imageCropX: 0,
-  imageCropY: 0,
-  imageCropWidth: 1920,
-  imageCropHeight: 1080,
-  gradientStart: '#1a1a1a',
-  gradientEnd: '#4a4a4a',
-  gradientDirection: 'vertical',
+  layers: [
+    {
+      id: 'default-color',
+      type: 'color',
+      color: '#1a1a1a',
+      opacity: 1,
+      x: 0,
+      y: 0,
+      width: defaultResolution.width,
+      height: defaultResolution.height,
+    },
+  ],
 };
 
 const defaultPackInfo: PackInfo = {
@@ -231,6 +269,7 @@ export const useWallStore = create<WallStore>((set) => ({
   sounds: defaultSounds,
   lockImages: defaultLockImages,
   selectedArea: null,
+  selectedLayerId: null,
   replaceLockedInstances: false,
 
   setResolution: (resolution) =>
@@ -309,6 +348,8 @@ export const useWallStore = create<WallStore>((set) => ({
 
   selectArea: (area) => set({ selectedArea: area }),
 
+  selectLayer: (id) => set({ selectedLayerId: id }),
+
   setReplaceLockedInstances: (value) => set({ replaceLockedInstances: value }),
 
   resetToDefault: () =>
@@ -320,6 +361,7 @@ export const useWallStore = create<WallStore>((set) => ({
       sounds: defaultSounds,
       lockImages: defaultLockImages,
       selectedArea: null,
+      selectedLayerId: null,
       replaceLockedInstances: false,
     }),
 
@@ -342,4 +384,108 @@ export const useWallStore = create<WallStore>((set) => ({
         ? { ...state.lockImages, ...data.lockImages }
         : state.lockImages,
     })),
+
+  // Background layer management
+  addLayer: (type, data) =>
+    set((state) => {
+      let newLayer: BackgroundLayer;
+      const id = crypto.randomUUID();
+
+      // New layer is added at the top, so it gets default opacity of 1
+      const newLayerOpacity = 1;
+
+      switch (type) {
+        case 'color':
+          newLayer = {
+            id,
+            type: 'color',
+            color: (data as Partial<ColorLayer>)?.color ?? '#1a1a1a',
+            opacity: newLayerOpacity,
+            x: 0,
+            y: 0,
+            width: state.resolution.width,
+            height: state.resolution.height,
+          };
+          break;
+        case 'image': {
+          const imageData = data as Partial<ImageLayer>;
+          newLayer = {
+            id,
+            type: 'image',
+            image: imageData?.image ?? '',
+            brightness: imageData?.brightness ?? 100,
+            blur: imageData?.blur ?? 0,
+            offsetX: imageData?.offsetX ?? 0,
+            offsetY: imageData?.offsetY ?? 0,
+            scale: imageData?.scale ?? 1,
+            cropX: imageData?.cropX ?? 0,
+            cropY: imageData?.cropY ?? 0,
+            cropWidth: imageData?.cropWidth ?? state.resolution.width,
+            cropHeight: imageData?.cropHeight ?? state.resolution.height,
+            opacity: newLayerOpacity,
+          };
+          break;
+        }
+        case 'gradient':
+          newLayer = {
+            id,
+            type: 'gradient',
+            gradientStart: (data as Partial<GradientLayer>)?.gradientStart ?? '#1a1a1a',
+            gradientEnd: (data as Partial<GradientLayer>)?.gradientEnd ?? '#4a4a4a',
+            gradientDirection: (data as Partial<GradientLayer>)?.gradientDirection ?? 'vertical',
+            opacity: newLayerOpacity,
+            x: 0,
+            y: 0,
+            width: state.resolution.width,
+            height: state.resolution.height,
+          };
+          break;
+      }
+
+      return {
+        background: {
+          ...state.background,
+          layers: [...state.background.layers, newLayer],
+        },
+        selectedLayerId: id,
+      };
+    }),
+
+  removeLayer: (id) =>
+    set((state) => ({
+      background: {
+        ...state.background,
+        layers: state.background.layers.filter((layer) => layer.id !== id),
+      },
+      selectedLayerId: state.selectedLayerId === id ? null : state.selectedLayerId,
+    })),
+
+  updateLayer: (id, updates) =>
+    set((state) => ({
+      background: {
+        ...state.background,
+        layers: state.background.layers.map((layer) =>
+          layer.id === id ? { ...layer, ...updates } as BackgroundLayer : layer
+        ),
+      },
+    })),
+
+  reorderLayers: (fromIndex, toIndex) =>
+    set((state) => {
+      const layers = [...state.background.layers];
+      const [removed] = layers.splice(fromIndex, 1);
+      layers.splice(toIndex, 0, removed);
+
+      // Force opacity to 1 for the bottom layer (index 0)
+      if (layers.length > 0 && layers[0].opacity !== 1) {
+        layers[0] = { ...layers[0], opacity: 1 };
+      }
+
+      return {
+        background: {
+          ...state.background,
+          layers,
+        },
+      };
+    }),
 }));

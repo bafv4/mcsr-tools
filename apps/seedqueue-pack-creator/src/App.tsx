@@ -16,11 +16,20 @@ import { useI18n } from './i18n/I18nContext';
 
 const versionInfo: VersionInfo = {
   appName: 'SeedQueue Wall Maker',
-  version: 'v2.4.0',
+  version: 'v2.5.0',
   author: 'baf',
   authorUrl: 'https://github.com/bafv4',
   repoUrl: 'https://github.com/bafv4/mcsr-tools',
   changelog: [
+    {
+      version: 'v2.5.0',
+      date: '2025-12-14',
+      changes: [
+        'サウンド設定の改善(2)',
+        '背景がちょっとリッチに',
+        'Removed Entity303',
+      ],
+    },
     {
       version: 'v2.4.0',
       date: '2025-11-10',
@@ -94,6 +103,7 @@ function App() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
+  const [activeTab, setActiveTab] = useState('info');
 
   // Load layout and resolution from URL parameter on mount
   useEffect(() => {
@@ -346,7 +356,7 @@ function App() {
             {/* Left Panel - Settings */}
             <div className="lg:col-span-1 min-h-0">
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow h-full flex flex-col">
-                <Tabs defaultValue="info" className="h-full flex flex-col">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
                   <div className="p-6 pb-4 flex-shrink-0">
                     <TabsList>
                       <TabsTrigger value="info">{t('tabInfo')}</TabsTrigger>
@@ -387,7 +397,7 @@ function App() {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{t('preview')}</h2>
                 <div className="flex justify-center">
-                  <WallPreview />
+                  <WallPreview activeTab={activeTab} />
                 </div>
                 <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
                   <p>{t('previewHint')}</p>

@@ -22,7 +22,9 @@ export const translations = {
 
     // Preview
     preview: 'プレビュー',
-    previewHint: 'ヒント: エリアをドラッグして移動、角をドラッグしてリサイズできます',
+    previewHint: 'ヒント: エリアをドラッグして移動、角をドラッグしてリサイズできます。背景タブでレイヤーを選択すると背景画像の移動・リサイズができます',
+    showLayout: 'レイアウト',
+    showBackground: '背景',
 
     // Pack Info
     packInfoTitle: 'リソースパック情報',
@@ -49,6 +51,14 @@ export const translations = {
     removeImage: '削除',
     adjustImage: '調整',
     imageSet: '画像が設定されています',
+    addImageLayer: '画像レイヤーを追加',
+    addLayer: 'レイヤーを追加',
+    layerOrder: 'レイヤー順序 (上から下)',
+    layer: 'レイヤー',
+    moveUp: '上に移動',
+    moveDown: '下に移動',
+    noImageLayers: '画像レイヤーがありません',
+    noLayers: 'レイヤーがありません',
     gradientSettings: 'グラデーション設定',
     gradientStart: '開始色',
     gradientEnd: '終了色',
@@ -57,6 +67,15 @@ export const translations = {
     horizontal: '水平',
     diagonal: '対角線',
     reverseDiagonal: '逆対角線',
+    edit: '編集',
+    opacity: '透明度',
+    layerSettings: 'レイヤー設定',
+    colorLayerSettings: '単色レイヤー設定',
+    gradientLayerSettings: 'グラデーションレイヤー設定',
+    imageLayerSettings: '画像レイヤー設定',
+    bottomLayerOpacityNote: '最下層のレイヤーは透明度を設定できません',
+    layerType: 'レイヤータイプ',
+    selectImagePrompt: '画像を選択してください',
 
     // Sound Settings
     soundSettings: 'サウンド',
@@ -183,6 +202,19 @@ export const translations = {
     blurAmount: 'ぼかし',
     cropHint: '💡 青い枠をドラッグして表示範囲を調整',
 
+    // Layer position/size
+    layerX: 'X座標',
+    layerY: 'Y座標',
+    layerWidth: '幅',
+    layerHeight: '高さ',
+    imageOffsetX: 'X オフセット',
+    imageOffsetY: 'Y オフセット',
+    imageScale: 'スケール',
+
+    // Icon crop modal
+    iconCropTitle: 'アイコンの切り抜き',
+    iconCropHint: '正方形の範囲をドラッグして調整してください',
+
     // Info Modal (VersionChip)
     languageLabel: 'Language / 言語',
     versionLabel: 'バージョン',
@@ -213,7 +245,9 @@ export const translations = {
 
     // Preview
     preview: 'Preview',
-    previewHint: 'Hint: Drag areas to move, drag corners to resize',
+    previewHint: 'Hint: Drag areas to move, drag corners to resize. Select a layer in Background tab to move/resize background images',
+    showLayout: 'Layout',
+    showBackground: 'Background',
 
     // Pack Info
     packInfoTitle: 'Resource Pack Info',
@@ -240,6 +274,14 @@ export const translations = {
     removeImage: 'Remove',
     adjustImage: 'Adjust',
     imageSet: 'Image is set',
+    addImageLayer: 'Add Image Layer',
+    addLayer: 'Add Layer',
+    layerOrder: 'Layer Order (Top to Bottom)',
+    layer: 'Layer',
+    moveUp: 'Move Up',
+    moveDown: 'Move Down',
+    noImageLayers: 'No image layers',
+    noLayers: 'No layers',
     gradientSettings: 'Gradient Settings',
     gradientStart: 'Start Color',
     gradientEnd: 'End Color',
@@ -248,6 +290,15 @@ export const translations = {
     horizontal: 'Horizontal',
     diagonal: 'Diagonal',
     reverseDiagonal: 'Reverse Diagonal',
+    edit: 'Edit',
+    opacity: 'Opacity',
+    layerSettings: 'Layer Settings',
+    colorLayerSettings: 'Solid Color Layer Settings',
+    gradientLayerSettings: 'Gradient Layer Settings',
+    imageLayerSettings: 'Image Layer Settings',
+    bottomLayerOpacityNote: 'The bottom layer cannot have opacity settings',
+    layerType: 'Layer Type',
+    selectImagePrompt: 'Please select an image',
 
     // Sound Settings
     soundSettings: 'Sound',
@@ -373,6 +424,19 @@ export const translations = {
     brightness: 'Brightness',
     blurAmount: 'Blur',
     cropHint: '💡 Drag the blue frame to adjust the display area',
+
+    // Layer position/size
+    layerX: 'X Position',
+    layerY: 'Y Position',
+    layerWidth: 'Width',
+    layerHeight: 'Height',
+    imageOffsetX: 'X Offset',
+    imageOffsetY: 'Y Offset',
+    imageScale: 'Scale',
+
+    // Icon crop modal
+    iconCropTitle: 'Crop Icon',
+    iconCropHint: 'Drag the square area to adjust',
 
     // Info Modal (VersionChip)
     languageLabel: 'Language / 言語',
